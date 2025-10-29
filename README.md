@@ -4,6 +4,7 @@ Implementação de uma Rede Neural (NN do inglês _Neural Network_) utilizando P
 ## Sumário
 - [Sobre]
 - [Como utilizar]
+- [Dependências]
 
 ## Sobre
 Este projeto tem como objetivo a implementação de uma NN completa utilizando Python.
