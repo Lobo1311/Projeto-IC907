@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
-from NeuralNetwork import Layer_Dense
-
 @dataclass
 class BasicData(metaclass=ABCMeta):
     deactivate:bool = False
@@ -43,11 +41,9 @@ class Layer(BasicData, metaclass=ABCMeta):
     def backward(self, dvalues):
         raise NotImplementedError("Method must be implemented in subclass.")
 
-class Loss(BasicData, metaclass=ABCMeta):
+class Loss(Layer, metaclass=ABCMeta):
     def __init__(self):
         super().__init__()
-
-        self.Loss:float = -123456789.0
 
     def calculate(self, output:np.ndarray, y:np.ndarray):
         sample_losses = self.forward(output, y)
@@ -62,5 +58,5 @@ class Optimizer(BasicData, metaclass=ABCMeta):
         self.learning_rate:float = -123456789.0
 
     @abstractmethod
-    def update_params(self, layer:Layer_Dense):
+    def update_params(self, layer):
         raise NotImplementedError("Method must be implemented in subclass.")
