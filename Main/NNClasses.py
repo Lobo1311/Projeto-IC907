@@ -1,5 +1,5 @@
 import numpy as np
-from Main.BaseClasses import Layer, Loss, Optimizer
+from BaseClasses import Layer, Loss, Optimizer
 
 class Activation_ReLU(Layer):
     def forward(self, inputs:np.ndarray):
