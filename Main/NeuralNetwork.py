@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class NeuralNetwork(BasicData):
-    def __init__(self, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, epochs:int=100):
+    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, epochs:int=100):
         super().__init__()
         self.layers:list[Layer] = []
 
@@ -16,8 +16,13 @@ class NeuralNetwork(BasicData):
         self.LossVec:np.ndarray = np.zeros(self.epochs)
         #todo: separate train and validation loss vectors
 
-    def add_layer(self, layer:Layer):
-        self.layers.append(layer)
+        self.LastLayerSize:int = inputSize
+
+    def add_layer(self, neurons:int, activation:Layer=None):
+        self.layers.append(Layer_Dense(self.LastLayerSize, neurons))
+        self.LastLayerSize = neurons
+        
+        if activation: self.layers.append(activation)
 
     def forward(self, inputs:np.ndarray):
         for layer in self.layers:

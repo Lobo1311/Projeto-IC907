@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def main():
     # Real a and b for the line
-    xpts = np.linspace(0,1,100)
+    xpts = np.linspace(0, 1, 100)
     npts = len(xpts)
 
     # Generating data
@@ -16,17 +16,15 @@ def main():
     epochs = 10001
 
     # Creating the neural network
-    nn = NeuralNetwork(lr=lr, epochs=epochs)
-    nn.add_layer(Layer_Dense(1, 50))
-    nn.add_layer(Activation_ReLU())
-    nn.add_layer(Layer_Dense(50, 25))
-    nn.add_layer(Activation_ReLU())
-    nn.add_layer(Layer_Dense(25, 1))
-    #todo make a better constructor
+    nn = NeuralNetwork(1, lr=lr, epochs=epochs)
+    nn.add_layer(50, Activation_ReLU())
+    nn.add_layer(25, Activation_ReLU())
+    nn.add_layer(1)
 
     # Training the neural network
     nn.train(xpts.reshape(npts, 1), yreal.reshape(npts, 1))
 
+    # Plotting results
     nn.plot_loss()
 
     plt.plot(xpts, yreal, 'o', label='True data')
