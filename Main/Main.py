@@ -1,6 +1,6 @@
 from NeuralNetwork import NeuralNetwork
 from NNClasses import Activation_ReLU
-from TrainTestSplit import DataSet
+from DataSet import DataSet
 import numpy as np
 import matplotlib.pyplot as plt
 
