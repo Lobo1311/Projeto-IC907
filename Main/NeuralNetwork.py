@@ -1,5 +1,6 @@
 from BaseClasses import BasicData, Layer, Loss, Optimizer
 from NNClasses import Layer_Dense, Loss_MeanSquaredError, Optimizer_SGD
+from Main.DataSet import DataSet
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,8 +14,8 @@ class NeuralNetwork(BasicData):
         self.Loss:Loss = lossFunc()
         self.optimizer:Optimizer = optimizer(lr)
 
-        self.LossVec:np.ndarray = np.zeros(self.epochs)
-        #todo: separate train and validation loss vectors
+        self.LossVecTrain:np.ndarray = np.zeros(self.epochs)
+        self.LossVecTest:np.ndarray = None
 
         self.LastLayerSize:int = inputSize
 
@@ -38,21 +39,19 @@ class NeuralNetwork(BasicData):
             
         return
     
-    def train(self, input:np.ndarray, y_true:np.ndarray):
+    def train(self, trainData:DataSet, testData:DataSet=None):
+        if testData: self.LossVecTest = np.zeros(self.epochs)
+        
         for epoch in range(self.epochs):
             # Forward pass
-            output = self.forward(input)
+            trainOutput = self.forward(trainData.x)
 
             # Compute loss
-            loss = self.Loss.calculate(output, y_true)
-            self.LossVec[epoch] = loss
-
-            # Print 10 times during training
-            if epoch % (self.epochs // 10) == 0:
-                print(f"Epoch {epoch}: Loss = {loss:.10f}")
+            trainLoss = self.Loss.calculate(trainOutput, trainData.y)
+            self.LossVecTrain[epoch] = trainLoss
 
             # Backward pass
-            self.Loss.backward(output, y_true)
+            self.Loss.backward(trainOutput, trainData.y)
             self.backward(self.Loss.dinputs)
 
             # Parameters update
@@ -60,11 +59,26 @@ class NeuralNetwork(BasicData):
                 if isinstance(layer, Layer_Dense):
                     self.optimizer.update_params(layer)
 
-    def plot_loss(self): #todo: separate train and validation loss vectors
-        plt.plot(self.LossVec)
+            if testData:
+                testOutput = self.forward(testData.x)
+                testLoss = self.Loss.calculate(testOutput, testData.y)
+                self.LossVecTest[epoch] = testLoss
+
+            # Print 10 times during training
+            if epoch % (self.epochs // 10) == 0:
+                print(f"Epoch {epoch}: Loss = {trainLoss:.10f}", end='')
+                if testData:
+                    print(f", Test Loss = {testLoss:.10f}")
+                else:
+                    print()
+
+    def plot_loss(self):
+        plt.plot(self.LossVecTrain, label="Train Loss")
+        if self.LossVecTest is not None: plt.plot(self.LossVecTest, label="Test Loss")
         plt.title("Loss over Epochs")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
+        plt.legend()
         plt.show()
 
 
