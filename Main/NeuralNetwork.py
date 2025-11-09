@@ -1,6 +1,6 @@
 from BaseClasses import BasicData, Layer, Loss, Optimizer
 from NNClasses import Layer_Dense, Loss_MeanSquaredError, Optimizer_SGD
-from Main.DataSet import DataSet
+from DataSet import DataSet
 import numpy as np
 import matplotlib.pyplot as plt
 
