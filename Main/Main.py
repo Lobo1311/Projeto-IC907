@@ -21,9 +21,31 @@ def main():
 
     # Creating the neural network
     nn = NeuralNetwork(1, lr=lr, epochs=epochs)
-    nn.add_layer(50, Activation_ReLU())
-    nn.add_layer(25, Activation_ReLU())
-    nn.add_layer(1)
+
+    nn_layers = {
+                "layer_0": 
+                    {
+                        "neurons": 50, 
+                        "activation": Activation_ReLU()
+                    },
+                "layer_1": 
+                    {
+                        "neurons": 25, 
+                        "activation": Activation_ReLU()
+                    },
+                "layer_2": 
+                    {
+                        "neurons": 1, 
+                        "activation": None
+                    }
+                }
+    
+    nn.build_nn(nn_layers)
+    
+
+    # nn.add_layer(50, Activation_ReLU())
+    # nn.add_layer(25, Activation_ReLU())
+    # nn.add_layer(1)
 
     # Training the neural network
     nn.train(train_set, test_set)

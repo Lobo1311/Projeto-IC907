@@ -18,6 +18,13 @@ class NeuralNetwork(BasicData):
         self.LossVecTest:np.ndarray = None
 
         self.LastLayerSize:int = inputSize
+    
+    def build_nn(self, layers:dict):
+        for i in range(len(layers)):
+            num_neurons = layers[f"layer_{i}"]["neurons"]
+            activation = layers[f"layer_{i}"]["activation"]
+            
+            self.add_layer(num_neurons, activation)
 
     def add_layer(self, neurons:int, activation:Layer=None):
         self.layers.append(Layer_Dense(self.LastLayerSize, neurons))
