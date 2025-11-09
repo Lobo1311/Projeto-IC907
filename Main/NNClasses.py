@@ -10,6 +10,31 @@ class Activation_ReLU(Layer):
         self.dinputs = dvalues.copy() #* Copy to avoid modifying the original array
         self.dinputs = np.where(self.inputs <= 0, 0, self.dinputs) #* Zero gradient where output was less than or equal to 0
 
+class Activation_LeakyReLU(Layer):
+    def forward(self, inputs:np.ndarray):
+        self.inputs = inputs #* Save inputs for backpropagation
+        self.output = np.where(inputs > 0, inputs, inputs * 0.01)
+
+    def backward(self, dvalues:np.ndarray):
+        self.dinputs = dvalues.copy() #* Copy to avoid modifying the original array
+        self.dinputs = np.where(self.inputs > 0, self.dinputs, self.dinputs * 0.01)
+
+class Activation_Tanh(Layer):
+    def forward(self, inputs:np.ndarray):
+        self.inputs = inputs #* Save inputs for backpropagation
+        self.output = np.tanh(inputs)
+
+    def backward(self, dvalues:np.ndarray):
+        self.dinputs = dvalues * (1 - self.output ** 2)
+
+class Activation_Sigmoid(Layer):
+    def forward(self, inputs:np.ndarray):
+        self.inputs = inputs #* Save inputs for backpropagation
+        self.output = 1 / (1 + np.exp(-inputs))
+
+    def backward(self, dvalues:np.ndarray):
+        self.dinputs = dvalues * (1 - self.output) * self.output
+
 class Layer_Dense(Layer):
     def __init__(self, n_inputs:int, n_neurons:int):
         super().__init__()
