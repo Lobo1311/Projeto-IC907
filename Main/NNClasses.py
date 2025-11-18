@@ -56,6 +56,30 @@ class Layer_Dense(Layer):
         self.dweights = self.inputs.T @ dvalues
         self.dbiases = np.sum(dvalues, axis = 0, keepdims = True)
 
+class Layer_Dropout(Layer):
+    def __init__(self, is_training_mode: bool = False, dropout_prob: float = None):
+        super().__init__()
+
+        self.is_training_mode: bool = is_training_mode
+        self.dropout_prob: float = dropout_prob
+        self.dropout_mask: float = None
+
+    def forward(self, inputs:np.ndarray):
+        if self.is_training_mode:
+            self.dropout_mask = (np.random.rand(*inputs.shape) < self.dropout_prob) / self.dropout_prob
+
+            self.inputs = inputs #* Save inputs for backpropagation
+            self.output = inputs * self.dropout_mask
+        else:
+            self.dropout_mask = np.ones_like(inputs)
+
+            self.inputs = inputs #* Save inputs for backpropagation
+            self.output = inputs
+
+    # Backward pass
+    def backward(self, dvalues:np.ndarray):
+        self.dinputs = dvalues * self.dropout_mask
+
 class Loss_MeanSquaredError(Loss):
     def __init__(self):
         super().__init__()

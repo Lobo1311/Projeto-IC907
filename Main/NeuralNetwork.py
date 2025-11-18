@@ -1,11 +1,11 @@
 from BaseClasses import BasicData, Layer, Loss, Optimizer
-from NNClasses import Layer_Dense, Loss_MeanSquaredError, Optimizer_SGD
+from NNClasses import Layer_Dense, Layer_Dropout, Loss_MeanSquaredError, Optimizer_SGD
 from DataSet import DataSet
 import numpy as np
 import matplotlib.pyplot as plt
 
 class NeuralNetwork(BasicData):
-    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, epochs:int=100):
+    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, epochs:int=100, dropout_prob: float = 0.7):
         super().__init__()
         self.layers:list[Layer] = []
 
@@ -18,19 +18,24 @@ class NeuralNetwork(BasicData):
         self.LossVecTest:np.ndarray = None
 
         self.LastLayerSize:int = inputSize
+
+        self.is_train_mode: bool = True
+        self.dropout_prob: float = dropout_prob
     
     def build_nn(self, layers:dict):
         for i in range(len(layers)):
             num_neurons = layers[f"layer_{i}"]["neurons"]
             activation = layers[f"layer_{i}"]["activation"]
+            dropout = layers[f"layer_{i}"]["dropout"]
             
-            self.add_layer(num_neurons, activation)
+            self.add_layer(num_neurons, activation, dropout)
 
-    def add_layer(self, neurons:int, activation:Layer=None):
+    def add_layer(self, neurons:int, activation:Layer=None, dropout:bool=False):
         self.layers.append(Layer_Dense(self.LastLayerSize, neurons))
         self.LastLayerSize = neurons
         
         if activation: self.layers.append(activation)
+        if dropout: self.layers.append(Layer_Dropout(self.is_train_mode, self.dropout_prob))
 
     def forward(self, inputs:np.ndarray):
         for layer in self.layers:
@@ -47,6 +52,9 @@ class NeuralNetwork(BasicData):
         return
     
     def train(self, trainData:DataSet, testData:DataSet=None):
+        # set train mode
+        self.is_train_mode = True
+
         if testData: self.LossVecTest = np.zeros(self.epochs)
         
         for epoch in range(self.epochs):
@@ -78,6 +86,9 @@ class NeuralNetwork(BasicData):
                     print(f", Test Loss = {testLoss:.10f}")
                 else:
                     print()
+            
+        # deactivate train mode
+        self.is_train_mode = False
 
     def plot_loss(self):
         plt.plot(self.LossVecTrain, label="Train Loss")

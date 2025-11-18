@@ -17,7 +17,7 @@ def main():
 
     # Learning rate and number of epochs
     lr = 0.1
-    epochs = 10001
+    epochs = 5000
 
     # Creating the neural network
     nn = NeuralNetwork(1, lr=lr, epochs=epochs)
@@ -26,17 +26,20 @@ def main():
                 "layer_0": 
                     {
                         "neurons": 50, 
-                        "activation": Activation_ReLU()
+                        "activation": Activation_ReLU(),
+                        "dropout": False
                     },
                 "layer_1": 
                     {
                         "neurons": 25, 
-                        "activation": Activation_ReLU()
+                        "activation": Activation_ReLU(),
+                        "dropout": True
                     },
                 "layer_2": 
                     {
                         "neurons": 1, 
-                        "activation": None
+                        "activation": None,
+                        "dropout": False
                     }
                 }
     
