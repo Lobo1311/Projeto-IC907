@@ -61,15 +61,21 @@ class Layer_Dropout(Layer):
         super().__init__()
 
         self.is_training_mode: bool = is_training_mode
-        self.dropout_prob: float = dropout_prob
+        
+        self.dropout_prob: float = dropout_prob if dropout_prob is not None else 0.4
+
+        if not 0.0 <= self.dropout_prob <= 1.0:
+            raise ValueError("Dropout probability must be between 0 and 1.")
+        
         self.dropout_mask: float = None
 
     def forward(self, inputs:np.ndarray):
         if self.is_training_mode:
-            self.dropout_mask = (np.random.rand(*inputs.shape) < self.dropout_prob) / self.dropout_prob
 
+            self.dropout_mask = np.random.binomial(1, (1-self.dropout_prob), size=inputs.shape) / (1-self.dropout_prob)
             self.inputs = inputs #* Save inputs for backpropagation
             self.output = inputs * self.dropout_mask
+
         else:
             self.dropout_mask = np.ones_like(inputs)
 

@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class NeuralNetwork(BasicData):
-    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, epochs:int=100, dropout_prob: float = 0.7):
+    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, epochs:int=100):
         super().__init__()
         self.layers:list[Layer] = []
 
@@ -20,7 +20,6 @@ class NeuralNetwork(BasicData):
         self.LastLayerSize:int = inputSize
 
         self.is_train_mode: bool = True
-        self.dropout_prob: float = dropout_prob
     
     def build_nn(self, layers:dict):
         for i in range(len(layers)):
@@ -30,12 +29,13 @@ class NeuralNetwork(BasicData):
             
             self.add_layer(num_neurons, activation, dropout)
 
-    def add_layer(self, neurons:int, activation:Layer=None, dropout:bool=False):
+    def add_layer(self, neurons:int, activation:Layer=None, dropout:list=[False]):
         self.layers.append(Layer_Dense(self.LastLayerSize, neurons))
         self.LastLayerSize = neurons
         
         if activation: self.layers.append(activation)
-        if dropout: self.layers.append(Layer_Dropout(self.is_train_mode, self.dropout_prob))
+
+        if dropout[0]: self.layers.append(Layer_Dropout(self.is_train_mode, dropout[1] if len(dropout) > 1 else None))
 
     def forward(self, inputs:np.ndarray):
         for layer in self.layers:

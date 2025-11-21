@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 
 def main():
     # Real a and b for the line
+    seed = 42
+    np.random.seed(seed)
+
     xpts = np.linspace(0, 1, 20)
     npts = len(xpts)
 
@@ -27,29 +30,24 @@ def main():
                     {
                         "neurons": 50, 
                         "activation": Activation_ReLU(),
-                        "dropout": False
+                        "dropout": [False]
                     },
                 "layer_1": 
                     {
                         "neurons": 25, 
                         "activation": Activation_ReLU(),
-                        "dropout": True
+                        "dropout": [True, 0.2]
                     },
                 "layer_2": 
                     {
                         "neurons": 1, 
                         "activation": None,
-                        "dropout": False
+                        "dropout": [False]
                     }
                 }
     
     nn.build_nn(nn_layers)
     
-
-    # nn.add_layer(50, Activation_ReLU())
-    # nn.add_layer(25, Activation_ReLU())
-    # nn.add_layer(1)
-
     # Training the neural network
     nn.train(train_set, test_set)
 
