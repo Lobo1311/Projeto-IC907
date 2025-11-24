@@ -98,6 +98,14 @@ class NeuralNetwork(BasicData):
         # deactivate train mode
         self.is_train_mode = False
 
+    def predict(self, inputs:np.ndarray):
+        # deactivate the train mode
+        self.is_train_mode = False
+        # foward the inputs
+        y_pred: np.ndarray = self.forward(inputs=inputs)
+
+        return y_pred
+
     def plot_loss(self):
         plt.plot(self.LossVecTrain, label="Train Loss")
         if self.LossVecTest is not None: plt.plot(self.LossVecTest, label="Test Loss")

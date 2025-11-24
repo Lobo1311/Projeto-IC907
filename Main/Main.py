@@ -77,7 +77,8 @@ def main():
 
 
     set_xnew = np.linspace(0, 1, 200)
-    y_pred = nn.forward(set_xnew.reshape(-1, 1))
+    # y_pred = nn.forward(set_xnew.reshape(-1, 1))
+    y_pred = nn.predict(set_xnew.reshape(-1, 1))
     plt.plot(set_xnew, y_pred.flatten(),  'r-',label='NN prediction')
 
     # plt.scatter(train_set.x, train_set.y, label='NN prediction')
