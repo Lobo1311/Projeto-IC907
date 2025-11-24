@@ -105,9 +105,35 @@ class Loss_MeanSquaredError(Loss):
 class Optimizer_SGD(Optimizer):
     def __init__(self, learning_rate:float=1.0):
         super().__init__()
-
         self.learning_rate = learning_rate
 
+    def pre_update_params(self):
+        pass
+
     def update_params(self, layer:Layer_Dense):
+
         layer.weights -= self.learning_rate * layer.dweights
         layer.biases -= self.learning_rate * layer.dbiases
+
+    def post_update_params(self):
+        pass
+
+class Optimizer_SGD_Decay(Optimizer):
+    def __init__(self, learning_rate:float=1.0, decay_rate:float=0.8):
+        super().__init__()
+
+        self.learning_rate = learning_rate
+        self.decay_rate = decay_rate
+        self.step = 0
+
+    def pre_update_params(self):
+        
+        self.current_learning_rate  = self.learning_rate * (1 / ( 1 + self.decay_rate * self.step))
+
+    def update_params(self, layer:Layer_Dense):
+
+        layer.weights -= self.current_learning_rate * layer.dweights
+        layer.biases -= self.current_learning_rate * layer.dbiases
+    
+    def post_update_params(self):
+        self.step += 1

@@ -15,40 +15,43 @@ def main():
     # Generating data
     yreal = (
             np.sin(2*np.pi*xpts)
-            + 0.3*np.sin(12*np.pi*xpts)      
-    
+            + 0.3*np.sin(8*np.pi*xpts)      
         )
+    
+    # yreal = (np.sin(30*xpts) + np.cos(10*xpts) + 2 + xpts**2 ) ## Second function
+
 
     Data = DataSet(xpts.reshape(npts, 1), yreal.reshape(npts, 1))
     train_set, test_set = Data.split(0.3)
 
     # Learning rate and number of epochs
-    lr = 0.15
-    epochs = 10000
+    lr = 0.2
+    epochs = 80000
+    decay_rate = 1e-3
 
     # Creating the neural network
-    nn = NeuralNetwork(1, lr=lr, epochs=epochs)
+    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD_Decay)
 
     nn_layers = {
                 "layer_0": 
                     {
-                        "neurons": 512, 
+                        "neurons": 300, 
                         "activation": Activation_LeakyReLU(),
-                        "dropout": [False]
+                        "dropout": [True, 0.2],
                     },
                 "layer_1": 
                     {
-                        "neurons": 512, 
+                        "neurons": 100, 
                         "activation": Activation_LeakyReLU(),
-                        "dropout": [True, 0.4],
+                        "dropout":  [False],
                     },
+                # "layer_2": 
+                #     {
+                #         "neurons": 512, 
+                #         "activation": Activation_Tanh(),
+                #         "dropout": [True, 0.4],
+                #     },
                 "layer_2": 
-                    {
-                        "neurons": 512, 
-                        "activation": Activation_Tanh(),
-                        "dropout": [True, 0.4],
-                    },
-                "layer_3": 
                     {
                         "neurons": 1, 
                         "activation": None,
@@ -71,8 +74,15 @@ def main():
     # plt.show()
 
     plt.plot(xpts, yreal, '-', label='True data')
-    plt.scatter(train_set.x, nn.forward(train_set.x), label='NN prediction')
-    plt.scatter(test_set.x, nn.forward(test_set.x), label='NN test prediction')
+
+
+    set_xnew = np.linspace(0, 1, 200)
+    y_pred = nn.forward(set_xnew.reshape(-1, 1))
+    plt.plot(set_xnew, y_pred.flatten(),  'r-',label='NN prediction')
+
+    # plt.scatter(train_set.x, train_set.y, label='NN prediction')
+   
+    # plt.plot(test_set.x, (nn.forward(test_set.x.reshape(-1, 1))).flatten(), 'r-', label='NN test prediction')
 
     plt.title('Sine fit with neural net')
     plt.legend()

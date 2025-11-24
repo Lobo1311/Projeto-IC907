@@ -5,14 +5,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class NeuralNetwork(BasicData):
-    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, epochs:int=100):
+    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, decay_rate:float=0.8, epochs:int=100):
         super().__init__()
         self.layers:list[Layer] = []
 
         self.lr:float = lr
+        self.decay_rate:float = decay_rate
         self.epochs:int = epochs
         self.Loss:Loss = lossFunc()
-        self.optimizer:Optimizer = optimizer(lr)
+
+        self.optimizer:Optimizer = optimizer(learning_rate = lr)
+        if hasattr(self.optimizer, "decay_rate"):
+            self.optimizer.decay_rate = decay_rate
 
         self.LossVecTrain:np.ndarray = np.zeros(self.epochs)
         self.LossVecTest:np.ndarray = None
@@ -70,9 +74,13 @@ class NeuralNetwork(BasicData):
             self.backward(self.Loss.dinputs)
 
             # Parameters update
+            self.optimizer.pre_update_params()
+
             for layer in self.layers:
                 if isinstance(layer, Layer_Dense):
                     self.optimizer.update_params(layer)
+
+            self.optimizer.post_update_params()
 
             if testData:
                 testOutput = self.forward(testData.x)

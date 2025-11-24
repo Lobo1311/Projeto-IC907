@@ -56,7 +56,16 @@ class Optimizer(BasicData, metaclass=ABCMeta):
         super().__init__()
 
         self.learning_rate:float = -123456789.0
+        self.decay_rate:float=-123456789.0
 
     @abstractmethod
     def update_params(self, layer):
+        raise NotImplementedError("Method must be implemented in subclass.")
+    
+    @abstractmethod
+    def pre_update_params(self):
+        raise NotImplementedError("Method must be implemented in subclass.")
+    
+    @abstractmethod
+    def post_update_params(self):
         raise NotImplementedError("Method must be implemented in subclass.")
