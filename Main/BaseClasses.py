@@ -56,7 +56,9 @@ class Optimizer(BasicData, metaclass=ABCMeta):
         super().__init__()
 
         self.learning_rate:float = -123456789.0
-        self.decay_rate:float=-123456789.0
+        self.decay_rate:float=0.0
+        self.step:int = 0
+        self.momentum:float = 0.0
 
     @abstractmethod
     def update_params(self, layer):

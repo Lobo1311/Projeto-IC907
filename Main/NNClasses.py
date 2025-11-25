@@ -102,38 +102,57 @@ class Loss_MeanSquaredError(Loss):
         self.dinputs = -2 * (y_true - y_pred) / noutputs #* Gradient of outputs
         self.dinputs = self.dinputs / nsamples #* normalized by the samples
 
+# class Optimizer_SGD(Optimizer):
+#     def __init__(self, learning_rate:float=1.0):
+#         super().__init__()
+#         self.learning_rate = learning_rate
+
+#     def pre_update_params(self):
+#         pass
+
+#     def update_params(self, layer:Layer_Dense):
+
+#         layer.weights -= self.learning_rate * layer.dweights
+#         layer.biases -= self.learning_rate * layer.dbiases
+
+#     def post_update_params(self):
+#         pass
+
 class Optimizer_SGD(Optimizer):
-    def __init__(self, learning_rate:float=1.0):
-        super().__init__()
-        self.learning_rate = learning_rate
-
-    def pre_update_params(self):
-        pass
-
-    def update_params(self, layer:Layer_Dense):
-
-        layer.weights -= self.learning_rate * layer.dweights
-        layer.biases -= self.learning_rate * layer.dbiases
-
-    def post_update_params(self):
-        pass
-
-class Optimizer_SGD_Decay(Optimizer):
-    def __init__(self, learning_rate:float=1.0, decay_rate:float=0.8):
+    def __init__(self, learning_rate:float=1.0, decay_rate:float=0.0, momentum:float=0.0):
         super().__init__()
 
+        self.initial_learning_rate = learning_rate
         self.learning_rate = learning_rate
         self.decay_rate = decay_rate
         self.step = 0
+        self.momentum = momentum
 
     def pre_update_params(self):
         
-        self.current_learning_rate  = self.learning_rate * (1 / ( 1 + self.decay_rate * self.step))
+        if self.decay_rate:
+            self.learning_rate  = self.initial_learning_rate * (1 / ( 1 + self.decay_rate * self.step))
 
     def update_params(self, layer:Layer_Dense):
 
-        layer.weights -= self.current_learning_rate * layer.dweights
-        layer.biases -= self.current_learning_rate * layer.dbiases
+        if self.momentum:
+            if not hasattr(layer, 'weight_momentums'):
+                layer.weight_momentums = np.zeros_like(layer.weights)
+                layer.bias_momentums = np.zeros_like(layer.biases)
+
+            weight_updates = self.momentum * layer.weight_momentums - self.learning_rate * layer.dweights
+            bias_updates = self.momentum * layer.bias_momentums - self.learning_rate * layer.dbiases
+
+            layer.weight_momentums = weight_updates
+            layer.bias_momentums = bias_updates
+
+        else:
+            weight_updates = -self.learning_rate * layer.dweights
+            bias_updates = -self.learning_rate * layer.dbiases
+
+
+        layer.weights += weight_updates
+        layer.biases += bias_updates
     
     def post_update_params(self):
         self.step += 1

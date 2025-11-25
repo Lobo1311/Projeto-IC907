@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 
 class NeuralNetwork(BasicData):
     def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, 
-                 lr:float=1.0, decay_rate:float=0.8, epochs:int=100, l2_regularization:bool=False, l2_regularization_weight: float = 1.e-3):
+                 lr:float=1.0, decay_rate:float=0.0, epochs:int=100, l2_regularization:bool=False, l2_regularization_weight: float = 1.e-3, momentum:float=0.0):
         super().__init__()
         self.layers:list[Layer] = []
 
-        self.lr:float = lr
+        # self.lr:float = lr
         self.decay_rate:float = decay_rate
         self.epochs:int = epochs
         self.Loss:Loss = lossFunc()
@@ -18,6 +18,8 @@ class NeuralNetwork(BasicData):
         self.optimizer:Optimizer = optimizer(learning_rate = lr)
         if hasattr(self.optimizer, "decay_rate"):
             self.optimizer.decay_rate = decay_rate
+            self.optimizer.momentum = momentum
+
 
         self.LossVecTrain:np.ndarray = np.zeros(self.epochs)
         self.LossVecTest:np.ndarray = None
@@ -98,7 +100,7 @@ class NeuralNetwork(BasicData):
 
             # Print 10 times during training
             if epoch % (self.epochs // 10) == 0:
-                print(f"Epoch {epoch}: lr = {self.lr}, Loss = {trainLoss:.10f}", end='')
+                print(f"Epoch {epoch}: lr = {self.optimizer.learning_rate}, Loss = {trainLoss:.10f}", end='')
                 if testData:
                     print(f", Test Loss = {testLoss:.10f}")
                 else:

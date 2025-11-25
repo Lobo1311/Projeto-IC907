@@ -29,10 +29,11 @@ def main():
     lr = 0.2
     epochs = 80000
     # epochs = 40000
-    decay_rate = 1e-3
-
+    decay_rate = 1e-3 # 0.0 for no decay
+    momentum = 0.9  # 0.0 for no momentum
+    
     # Creating the neural network
-    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD, l2_regularization=True, l2_regularization_weight=1.e-3)
+    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD, l2_regularization=True, l2_regularization_weight=1.e-3, momentum=momentum)
     # nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD_Decay, l2_regularization=False, l2_regularization_weight=1.e-4)
     # nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD, l2_regularization=False, l2_regularization_weight=1.e-3)
 
