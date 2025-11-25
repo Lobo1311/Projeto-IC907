@@ -22,20 +22,24 @@ def main():
 
 
     Data = DataSet(xpts.reshape(npts, 1), yreal.reshape(npts, 1))
-    train_set, test_set = Data.split(0.3)
+    # train_set, test_set = Data.split(0.3)
+    train_set, test_set = Data.split(0.9) # maior numero de pontos de treino
 
     # Learning rate and number of epochs
     lr = 0.2
     epochs = 80000
+    # epochs = 40000
     decay_rate = 1e-3
 
     # Creating the neural network
-    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD_Decay)
+    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD, l2_regularization=True, l2_regularization_weight=1.e-3)
+    # nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD_Decay, l2_regularization=False, l2_regularization_weight=1.e-4)
+    # nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD, l2_regularization=False, l2_regularization_weight=1.e-3)
 
     nn_layers = {
                 "layer_0": 
                     {
-                        "neurons": 300, 
+                        "neurons": 500, 
                         "activation": Activation_LeakyReLU(),
                         "dropout": [True, 0.2],
                     },
@@ -47,9 +51,9 @@ def main():
                     },
                 # "layer_2": 
                 #     {
-                #         "neurons": 512, 
-                #         "activation": Activation_Tanh(),
-                #         "dropout": [True, 0.4],
+                #         "neurons": 50, 
+                #         "activation": Activation_LeakyReLU(),
+                #         "dropout": [True, 0.2],
                 #     },
                 "layer_2": 
                     {
@@ -74,7 +78,7 @@ def main():
     # plt.show()
 
     plt.plot(xpts, yreal, '-', label='True data')
-
+    plt.scatter(train_set.x, train_set.y, label='Train set')
 
     set_xnew = np.linspace(0, 1, 200)
     # y_pred = nn.forward(set_xnew.reshape(-1, 1))

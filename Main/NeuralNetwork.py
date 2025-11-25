@@ -5,7 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class NeuralNetwork(BasicData):
-    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, lr:float=1.0, decay_rate:float=0.8, epochs:int=100):
+    def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, 
+                 lr:float=1.0, decay_rate:float=0.8, epochs:int=100, l2_regularization:bool=False, l2_regularization_weight: float = 1.e-3):
         super().__init__()
         self.layers:list[Layer] = []
 
@@ -24,6 +25,8 @@ class NeuralNetwork(BasicData):
         self.LastLayerSize:int = inputSize
 
         self.is_train_mode: bool = True
+        self.l2_regularization: bool = l2_regularization
+        self.l2_regularization_weight: float = l2_regularization_weight
     
     def build_nn(self, layers:dict):
         for i in range(len(layers)):
@@ -65,13 +68,19 @@ class NeuralNetwork(BasicData):
             # Forward pass
             trainOutput = self.forward(trainData.x)
 
-            # Compute loss
-            trainLoss = self.Loss.calculate(trainOutput, trainData.y)
-            self.LossVecTrain[epoch] = trainLoss
-
             # Backward pass
             self.Loss.backward(trainOutput, trainData.y)
             self.backward(self.Loss.dinputs)
+
+            # include l2 regularization
+            if self.l2_regularization:
+                for layer in self.layers:
+                    if isinstance(layer, Layer_Dense):
+                        layer.dweights += (self.l2_regularization_weight * layer.weights)
+
+            # Compute loss
+            trainLoss = self.Loss.calculate(trainOutput, trainData.y)
+            self.LossVecTrain[epoch] = trainLoss
 
             # Parameters update
             self.optimizer.pre_update_params()
@@ -89,7 +98,7 @@ class NeuralNetwork(BasicData):
 
             # Print 10 times during training
             if epoch % (self.epochs // 10) == 0:
-                print(f"Epoch {epoch}: Loss = {trainLoss:.10f}", end='')
+                print(f"Epoch {epoch}: lr = {self.lr}, Loss = {trainLoss:.10f}", end='')
                 if testData:
                     print(f", Test Loss = {testLoss:.10f}")
                 else:

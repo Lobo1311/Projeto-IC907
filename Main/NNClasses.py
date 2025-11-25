@@ -39,8 +39,8 @@ class Layer_Dense(Layer):
     def __init__(self, n_inputs:int, n_neurons:int):
         super().__init__()
 
-        self.dweights:np.ndarray = None
-        self.dbiases:np.ndarray = None
+        self.dweights:np.ndarray = np.array([])
+        self.dbiases:np.ndarray = np.array([])
 
         self.weights = 0.01 * np.random.randn(n_inputs, n_neurons)
         #? self.biases = np.zeros((1, n_neurons))
