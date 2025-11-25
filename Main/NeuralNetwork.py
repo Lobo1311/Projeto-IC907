@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class NeuralNetwork(BasicData):
     def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, 
-                 lr:float=1.0, decay_rate:float=0.0, epochs:int=100, l2_regularization:bool=False, l2_regularization_weight: float = 1.e-3, momentum:float=0.0):
+                 lr:float=1.0, decay_rate:float=0.0, epochs:int=100, l2_regularization_weight: float = 1.e-3, momentum:float=0.0):
         super().__init__()
         self.layers:list[Layer] = []
 
@@ -17,8 +17,8 @@ class NeuralNetwork(BasicData):
 
         self.optimizer:Optimizer = optimizer(learning_rate = lr)
         if hasattr(self.optimizer, "decay_rate"):
-            self.optimizer.decay_rate = decay_rate
-            self.optimizer.momentum = momentum
+            self.optimizer.decay_rate = decay_rate 
+            self.optimizer.momentum = momentum 
 
 
         self.LossVecTrain:np.ndarray = np.zeros(self.epochs)
@@ -27,7 +27,7 @@ class NeuralNetwork(BasicData):
         self.LastLayerSize:int = inputSize
 
         self.is_train_mode: bool = True
-        self.l2_regularization: bool = l2_regularization
+        # self.l2_regularization: bool = l2_regularization
         self.l2_regularization_weight: float = l2_regularization_weight
     
     def build_nn(self, layers:dict):
@@ -75,10 +75,10 @@ class NeuralNetwork(BasicData):
             self.backward(self.Loss.dinputs)
 
             # include l2 regularization
-            if self.l2_regularization:
+            if self.l2_regularization_weight:
                 for layer in self.layers:
                     if isinstance(layer, Layer_Dense):
-                        layer.dweights += (self.l2_regularization_weight * layer.weights)
+                        layer.dweights += (2 * self.l2_regularization_weight * layer.weights)
 
             # Compute loss
             trainLoss = self.Loss.calculate(trainOutput, trainData.y)
@@ -99,7 +99,7 @@ class NeuralNetwork(BasicData):
                 self.LossVecTest[epoch] = testLoss
 
             # Print 10 times during training
-            if epoch % (self.epochs // 10) == 0:
+            if epoch % (self.epochs // 10) == 0 or epoch == self.epochs - 1:
                 print(f"Epoch {epoch}: lr = {self.optimizer.learning_rate}, Loss = {trainLoss:.10f}", end='')
                 if testData:
                     print(f", Test Loss = {testLoss:.10f}")
