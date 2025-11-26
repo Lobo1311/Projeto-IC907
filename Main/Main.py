@@ -1,10 +1,13 @@
 from NeuralNetwork import NeuralNetwork
 from NNClasses import *
 from DataSet import DataSet
+from NeuralNetwork_torch import ANN
+from LossPINN import LossPINN
+
 import numpy as np
 import matplotlib.pyplot as plt
 
-def main():
+def main_nn_by_hand():
     # Real a and b for the line
     seed = 42
     np.random.seed(seed)
@@ -33,7 +36,7 @@ def main():
     train_set, test_set = Data.split(0.5) # maior numero de pontos de treino
 
     # Learning rate and number of epochs
-    lr = 0.1
+    lr = 0.01
     epochs = 300000
     # epochs = 40000
     decay_rate = 0.00 # 0.0 for no decay
@@ -116,5 +119,41 @@ def main():
     plt.legend()
     plt.show()
 
+def main_nn_torch():
+    
+    # Real a and b for the line
+    seed = 42
+    np.random.seed(seed)
+
+    darcy_func: callable = ... # buid as a lambda func?
+    
+    xpts = np.linspace(0, 1, 70)
+    ypts = darcy_func(xpts)
+
+    # set the data set
+    data_set = DataSet(xpts, ypts)
+    data_set.add_noise(randomization_factor=1.)
+    
+    train_set, test_set = data_set.split(0.5) # maior numero de pontos de treino
+
+    # initialize pinn loss funcs
+    my_pinn_loss: LossPINN = LossPINN() # the loss funcs must be change inside this class... it can be improved later
+
+    # set hyperparameters
+    lr = 0.01
+    epochs = 300000
+    input_dim = 1
+    output_dim = 1
+    hidden_layers = [200]
+
+    model = ANN(input_dim=input_dim, hidden_layers=hidden_layers, output_dim=output_dim, loss2=my_pinn_loss.bc_loss_fn, loss2_weight=1e0)
+
+    # model.train_nn(x, y)
+
+    # model.plot_loss()
+    # model.plot_prediction(x_limits=, x_training_data=, y_training_data=, analitycal_func=darcy_func)
+    ...
+
 if __name__ == "__main__":
-    main()
+    main_nn_by_hand() # use to nn by hand validation
+    # main_nn_torch() # use to PINN validation
