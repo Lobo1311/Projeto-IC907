@@ -91,8 +91,10 @@ class Loss_MeanSquaredError(Loss):
         super().__init__()
 
     def forward(self, y_pred:np.ndarray, y_true:np.ndarray):
+        
         sample_losses = np.mean((y_true - y_pred)**2, axis=-1)
 
+    
         return sample_losses
 
     def backward(self, y_pred:np.ndarray, y_true:np.ndarray):

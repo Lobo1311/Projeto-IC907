@@ -68,6 +68,7 @@ class NeuralNetwork(BasicData):
         
         for epoch in range(self.epochs):
             # Forward pass
+            
             trainOutput = self.forward(trainData.x)
 
             # Backward pass
@@ -99,6 +100,13 @@ class NeuralNetwork(BasicData):
                 self.LossVecTest[epoch] = testLoss
 
             # Print 10 times during training
+
+
+            # print(epoch)
+
+            if trainLoss != trainLoss:  # Check for NaN
+                raise ValueError("Loss is NaN. Try adjusting the learning rate or check for issues in the data/model.")
+
             if epoch % (self.epochs // 10) == 0 or epoch == self.epochs - 1:
                 print(f"Epoch {epoch}: lr = {self.optimizer.learning_rate}, Loss = {trainLoss:.10f}", end='')
                 if testData:
@@ -120,10 +128,19 @@ class NeuralNetwork(BasicData):
     def plot_loss(self):
         plt.plot(self.LossVecTrain, label="Train Loss")
         if self.LossVecTest is not None: plt.plot(self.LossVecTest, label="Test Loss")
+        
+        
         plt.title("Loss over Epochs")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
         plt.legend()
         plt.show()
 
-
+        if self.LossVecTest is not None:
+            ratio_list = self.LossVecTest / self.LossVecTrain
+            plt.plot(ratio_list, label="Test/Train Loss Ratio")
+            plt.title("Test/Train Loss Ratio over Epochs")
+            plt.xlabel("Epochs")
+            plt.ylabel("Ratio")
+            plt.legend()
+            plt.show()
