@@ -57,7 +57,8 @@ class Optimizer(BasicData, metaclass=ABCMeta):
 
         self.learning_rate:float = -123456789.0
         self.decay_rate:float=0.0
-        self.step:int = 0
+        self.decay_step:int = 100000
+        self.interation:int = 0
         self.momentum:float = 0.0
 
     @abstractmethod

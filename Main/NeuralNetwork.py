@@ -6,12 +6,13 @@ import matplotlib.pyplot as plt
 
 class NeuralNetwork(BasicData):
     def __init__(self, inputSize:int, lossFunc=Loss_MeanSquaredError, optimizer=Optimizer_SGD, 
-                 lr:float=1.0, decay_rate:float=0.0, epochs:int=100, l2_regularization_weight: float = 1.e-3, momentum:float=0.0):
+                 lr:float=1.0, decay_rate:float=0.0, decay_step:int=100000, epochs:int=100, l2_regularization_weight: float = 1.e-3, momentum:float=0.0):
         super().__init__()
         self.layers:list[Layer] = []
 
         # self.lr:float = lr
         self.decay_rate:float = decay_rate
+        self.decay_step:int = decay_step
         self.epochs:int = epochs
         self.Loss:Loss = lossFunc()
 
@@ -19,6 +20,7 @@ class NeuralNetwork(BasicData):
         if hasattr(self.optimizer, "decay_rate"):
             self.optimizer.decay_rate = decay_rate 
             self.optimizer.momentum = momentum 
+            self.optimizer.decay_step = decay_step
 
 
         self.LossVecTrain:np.ndarray = np.zeros(self.epochs)
@@ -136,6 +138,18 @@ class NeuralNetwork(BasicData):
         plt.legend()
         plt.show()
 
+        x_epochs = np.arange(self.epochs)   
+        plt.plot(x_epochs[-int(len(x_epochs)/10):], self.LossVecTrain[-int(len(self.LossVecTrain)/10):], label="Train Loss")
+        if self.LossVecTest is not None: plt.plot(x_epochs[-int(len(x_epochs)/10):], self.LossVecTest[-int(len(self.LossVecTest)/10):], label="Test Loss")
+        
+        
+        plt.title("Loss over Epochs (Last 10%)")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.show()
+
+
         if self.LossVecTest is not None:
             ratio_list = self.LossVecTest / self.LossVecTrain
             plt.plot(ratio_list, label="Test/Train Loss Ratio")
@@ -144,3 +158,6 @@ class NeuralNetwork(BasicData):
             plt.ylabel("Ratio")
             plt.legend()
             plt.show()
+
+
+        
