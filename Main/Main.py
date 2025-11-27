@@ -12,8 +12,8 @@ def main_nn_by_hand():
     seed = 0
     np.random.seed(seed)
 
-    xpts = np.linspace(0, 3, 20)
-    set_xnew = np.linspace(0, 3, 20)
+    xpts = np.linspace(-2, 3, 100)
+    set_xnew = np.linspace(-2, 3, 1000)
     npts = len(xpts)
 
     # Generating data
@@ -29,15 +29,17 @@ def main_nn_by_hand():
             # + 0.3*np.cos(4*np.pi*xpts)      
            
         )
+    
+    yreal = np.where(np.sin(15 * xpts) + 0.3 * xpts**2 > 0, 1, 0)
     # yreal = (np.sin(10*xpts)) ## Second function
 
 
     Data = DataSet(xpts.reshape(npts, 1), yreal.reshape(npts, 1))
-    train_set, test_set = Data.split(0.8) 
+    train_set, test_set = Data.split(0.7) 
 
     # Learning rate and number of epochs
     lr = 0.1
-    epochs = 50000
+    epochs = 100000
     # epochs = 40000
     decay_rate = 0  # 0.0 for no decay
     decay_step = 100000
@@ -53,21 +55,21 @@ def main_nn_by_hand():
     nn_layers = {
                 "layer_0": 
                     {
-                        "neurons": 128, 
+                        "neurons": 500, 
                         "activation": Activation_ReLU(),
-                        "dropout": [True, 0.3],
+                        "dropout": [True, 0.5],
                     },
                 "layer_1": 
                     {
-                        "neurons": 128, 
+                        "neurons": 400, 
                         "activation": Activation_ReLU(),
-                        "dropout":  [False, 0.3],
+                        "dropout":  [True, 0.5],
                     },
                 "layer_2": 
                     {
-                        "neurons": 128, 
+                        "neurons": 200, 
                         "activation": Activation_ReLU(),
-                        "dropout":  [False, 0.3],
+                        "dropout":  [False, 0.5],
                     },
                 "layer_3": 
                     {
@@ -83,18 +85,18 @@ def main_nn_by_hand():
     nn.train(train_set, test_set)
 
     # Plotting results
-    # nn.plot_loss()
+    nn.plot_loss()
 
     # plt.scatter(xpts, yreal, label='True data')
 
     plt.plot(xpts, yreal, '-', color='orange', label='True function')
-    plt.scatter(train_set.x, train_set.y, s = 10, label='Train set')
-    plt.scatter(test_set.x, test_set.y, s = 10, label='Test set')
+    plt.scatter(train_set.x, train_set.y, s = 20, label='Train set')
+    plt.scatter(test_set.x, test_set.y, s = 20, label='Test set')
 
     # plt.scatter(test_set.x, test_set.y, label='Test set')
 
     y_pred = nn.predict(set_xnew.reshape(-1, 1))
-    plt.plot(set_xnew, y_pred.flatten(),  color = 'green', label='NN prediction with new xpts')
+    plt.plot(set_xnew, y_pred.flatten(),  color = 'green', label='NN prediction')
 
  
     plt.title(f'Fit with neural net')
