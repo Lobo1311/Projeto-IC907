@@ -7,6 +7,8 @@ from LossPINN import LossPINN
 import numpy as np
 import matplotlib.pyplot as plt
 
+from DarcyTransientFlow import DarcyTransientFlow
+
 def main_nn_by_hand():
     # Real a and b for the line
     seed = 0
@@ -141,6 +143,21 @@ def main_nn_torch():
     # model.plot_prediction(x_limits=, x_training_data=, y_training_data=, analitycal_func=darcy_func)
     ...
 
+def EquationTest():
+    L = 1.0
+    PL = 1e5      #* Left boundary pressure (Pa)
+    PR = 0.0      #* Right boundary pressure (Pa)
+    k = 1e-12    #* Permeability (m^2)
+    mu = 1e-3     #* Dynamic viscosity (Pa.s)
+    phi = 0.2     #* Porosity (-)
+    ct = 1e-9     #* Total compressibility (1/Pa)
+
+    problem = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct)
+
+    problem.Plot()
+
+
 if __name__ == "__main__":
-    main_nn_by_hand() # use to nn by hand validation
+    # main_nn_by_hand() # use to nn by hand validation
     # main_nn_torch() # use to PINN validation
+    EquationTest()
