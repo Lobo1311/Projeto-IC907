@@ -12,16 +12,16 @@ class BasicData(metaclass=ABCMeta):
     def ActivateAttr(self):
         self.deactivate = False
 
-    def _str_(self):
-        fields = ", ".join(f"{key}={value}" for key, value in self._dict_.items())
-        return f"{self._class.name_}({fields})"
+    def __str__(self):
+        fields = ", ".join(f"{key}={value}" for key, value in self.__dict__.items())
+        return f"{self.__class__.__name__}({fields})"
 
-    def _setattr_(self, name, value):
+    def __setattr__(self, name, value):
         if not self.deactivate:
-            return super()._setattr_(name, value)
+            return super().__setattr__(name, value)
         else:
             if hasattr(self, name):
-                return super()._setattr_(name, value)
+                return super().__setattr__(name, value)
             
             raise AttributeError(f"Cannot add new attribute '{name}' when object is deactivated.")
 
