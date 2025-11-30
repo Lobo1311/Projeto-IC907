@@ -106,23 +106,18 @@ def main_nn_by_hand():
     plt.title(f'Fit with neural net')
     plt.legend()
     plt.show()
-
-    a = 1
-
-def grad(outputs, inputs):
-  return torch.autograd.grad(outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True)[0]
     
 def main_nn_torch():
     #* problem definition
     L = 1.0       #* Length of the domain (m)
-    PL = 1e5      #* Left boundary pressure (Pa)
+    PL = 1.0      #* Left boundary pressure (Pa)
     PR = 0.0      #* Right boundary pressure (Pa)
     k = 1e-12    #* Permeability (m^2)
     mu = 1e-3     #* Dynamic viscosity (Pa.s)
     phi = 0.2     #* Porosity (-)
     ct = 1e-9     #* Total compressibility (1/Pa)
     t_start = 0.001  #* Initial time (s)
-    t_final = 1.0  #* Final time (s)
+    t_final = 0.07  #* Final time (s)
 
     numpoints = 100
 
@@ -136,6 +131,10 @@ def main_nn_torch():
     # data_set.add_noise(1.0)
     
     # train_set, test_set = data_set.split(0.5) # maior numero de pontos de treino
+
+    #* Gradient function
+    def grad(outputs, inputs):
+        return torch.autograd.grad(outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True)[0]
 
     #* Boundary condition P(0, t) = PL
     def loss_bc_left(model:PINN, numpoints:int=100):
@@ -160,13 +159,20 @@ def main_nn_torch():
         return loss_bc_right
 
     #* Physics loss (PDE residual)
-    def physics_loss(model:PINN):
-        X_collocation = np.array([[x, t] for t in np.linspace(t_start, t_final, numpoints) for x in np.linspace(0, L, numpoints)])
-        X_collocation_torch = model.np_to_th(X_collocation).requires_grad_(True)
+    def physics_loss(model:PINN):        
+        x_collocation = np.linspace(0, model.Problem.L, numpoints)
+        t_collocation = np.linspace(model.Problem.startTime, model.Problem.endTime, numpoints)
+
+        x_collocation_torch = model.np_to_th(x_collocation).requires_grad_(True)
+        t_collocation_torch = model.np_to_th(t_collocation).requires_grad_(True)
+
+        xx, tt = torch.meshgrid(x_collocation_torch.flatten(), t_collocation_torch.flatten(), indexing='ij')
+        X_collocation_torch = torch.stack((xx.flatten(), tt.flatten()), dim=1).requires_grad_(True)
+
         P_pred = model(X_collocation_torch)
-        dPdt = grad(P_pred, X_collocation_torch)[:, 1:2]
-        dPdx = grad(P_pred, X_collocation_torch)[:, 0:1]
-        dPdx2 = grad(dPdx, X_collocation_torch)[:, 0:1]
+        dPdt = grad(P_pred, t_collocation_torch)
+        dPdx = grad(P_pred, x_collocation_torch)
+        dPdx2 = grad(dPdx, x_collocation_torch)
 
         pde = dPdt - (model.Problem.k / (model.Problem.mu * model.Problem.phi * model.Problem.ct)) * dPdx2
 
@@ -175,22 +181,24 @@ def main_nn_torch():
 
     # set hyperparameters
     lr = 0.01
-    epochs = 1000
+    epochs = 500
     input_dim = 2
     output_dim = 1
-    hidden_layers = [50, 50]
+    hidden_layers = [100, 100]
 
     LossPINNVec = []
-    LossPINNVec.append(LossPINN(loss_bc_left, 0.1))
-    LossPINNVec.append(LossPINN(loss_bc_right, 0.1))
+    LossPINNVec.append(LossPINN(loss_bc_left, 0.01))
+    LossPINNVec.append(LossPINN(loss_bc_right, 0.01))
     LossPINNVec.append(LossPINN(physics_loss, 0.1))
 
     model = PINN(input_dim, hidden_layers, output_dim, nn.ReLU, epochs, None, lr, LossPINNVec, problem)
 
     model.train_nn()
+
+    model.evalLossPINNatT(0.01)
+
     model.plot_loss()
     model.plot_prediction()
-    ...
 
 def EquationTest():
     L = 1.0
