@@ -116,12 +116,12 @@ def main_nn_torch():
     mu = 1e-3     #* Dynamic viscosity (Pa.s)
     phi = 0.2     #* Porosity (-)
     ct = 1e-9     #* Total compressibility (1/Pa)
-    t_start = 0.001  #* Initial time (s)
-    t_final = 0.07  #* Final time (s)
+    t_start = 0.0001  #* Initial time (s)
+    t_final = 0.1  #* Final time (s)
 
-    numpoints = 100
+    numpoints = 300
 
-    problem = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct, startTime=t_start, endTime=t_final)
+    problem: DarcyTransientFlow = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct, startTime=t_start, endTime=t_final)
 
     # xpts = np.array([[x, t] for t in np.linspace(t_start, t_final, numpoints) for x in np.linspace(0, L, numpoints)])
     # ypts = np.array([problem.AnalyticalSolution(x, t) for x, t in xpts])
@@ -135,7 +135,7 @@ def main_nn_torch():
     #* Gradient function
     def grad(outputs, inputs):
         return torch.autograd.grad(outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True)[0]
-
+    
     #* Boundary condition P(0, t) = PL
     def loss_bc_left(model:PINN, numpoints:int=100):
         x0 = np.array([[0, t] for t in np.linspace(model.Problem.startTime, model.Problem.endTime, numpoints)])
@@ -170,32 +170,48 @@ def main_nn_torch():
         X_collocation_torch = torch.stack((xx.flatten(), tt.flatten()), dim=1).requires_grad_(True)
 
         P_pred = model(X_collocation_torch)
-        dPdt = grad(P_pred, t_collocation_torch)
-        dPdx = grad(P_pred, x_collocation_torch)
-        dPdx2 = grad(dPdx, x_collocation_torch)
+
+        # grads are the first derivatives       
+        grads = grad(P_pred, X_collocation_torch)
+
+        dPdt = grads[:, 1:2]
+        dPdx = grads[:, 0:1]    
+        dPdx2 = grad(dPdx, X_collocation_torch)[:, 0:1]
 
         pde = dPdt - (model.Problem.k / (model.Problem.mu * model.Problem.phi * model.Problem.ct)) * dPdx2
 
         return torch.mean(pde**2)
 
+    #* Loss initial condition
+    def loss_ic(model: PINN, numpoints=100):
+        x = np.linspace(0, model.Problem.L, numpoints)
+        X0 = np.stack([x, model.Problem.startTime*np.ones_like(x)], axis=1)
+        X0_torch = model.np_to_th(X0).requires_grad_(True)
+
+        P_init = np.array([model.Problem.AnalyticalSolution(xi, model.Problem.startTime) for xi in x])
+        P_init = torch.tensor(P_init[:, None], dtype=torch.float32)  # shape (numpoints, 1)
+
+        P_pred = model(X0_torch)
+        return torch.mean((P_pred - P_init)**2)
 
     # set hyperparameters
     lr = 0.01
     epochs = 500
     input_dim = 2
     output_dim = 1
-    hidden_layers = [100, 100]
+    hidden_layers = [50, 50, 50, 50]
 
     LossPINNVec = []
-    LossPINNVec.append(LossPINN(loss_bc_left, 0.01))
-    LossPINNVec.append(LossPINN(loss_bc_right, 0.01))
+    LossPINNVec.append(LossPINN(loss_bc_left, 10))
+    LossPINNVec.append(LossPINN(loss_bc_right, 10))
     LossPINNVec.append(LossPINN(physics_loss, 0.1))
+    LossPINNVec.append(LossPINN(loss_ic, 5))
 
-    model = PINN(input_dim, hidden_layers, output_dim, nn.ReLU, epochs, None, lr, LossPINNVec, problem)
+    model = PINN(input_dim, hidden_layers, output_dim, nn.Tanh, epochs, None, lr, LossPINNVec, problem)
 
     model.train_nn()
 
-    model.evalLossPINNatT(0.01)
+    # model.evalLossPINNatT(0.01)
 
     model.plot_loss()
     model.plot_prediction()

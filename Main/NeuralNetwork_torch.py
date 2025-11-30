@@ -167,6 +167,9 @@ class PINN(nn.Module, BasicData):
             valinit = self.Problem.startTime,
         )
 
+        for t in [0.0, 0.025, 0.05, 0.075, 0.1]:
+            print(t, float(self.predict(self.np_to_th(np.array([[0.5, t]])))))
+
         def update(val):
             line.set_ydata(self.Problem.AnalyticalSolution(x, time_slider.val))
             line2.set_ydata(self.predict(self.np_to_th(np.array([[xi, time_slider.val] for xi in x]))).detach().numpy())
