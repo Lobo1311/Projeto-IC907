@@ -177,10 +177,3 @@ class PINN(nn.Module, BasicData):
         fig.legend()
         fig.suptitle('Transient Darcy Flow in 1D Domain', y=0.95)
         plt.show()
-
-    def evalLossPINNatT(self, t):
-        total_loss = 0.0
-        for LossPINN in self.LossPINNVec:
-            total_loss += LossPINN.LossFunc(self) * LossPINN.Weight
-
-        return total_loss
