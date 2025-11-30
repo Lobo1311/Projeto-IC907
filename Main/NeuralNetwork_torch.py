@@ -147,26 +147,13 @@ class PINN(nn.Module, BasicData):
         plt.show()
 
     def plot_prediction(self, numpoints:int=100):
-        # x_vals = np.array([[x, t] for t in np.linspace(self.Problem.startTime, self.Problem.endTime, numpoints) for x in np.linspace(0, self.Problem.L, numpoints)])
-        # x_tensor = self.np_to_th(x_vals)
-        # y_preds = self.predict(x_tensor).detach().numpy()
-        # plt.figure(figsize=(8,4))
-        # plt.plot(x_vals, y_preds, label='NN Prediction', color='C2', linewidth=2)
-        # plt.plot(x_vals, self.Problem.AnalyticalSolution(x_vals), label='Analytical solution', color='C0', linewidth=2, linestyle='dashed') #! analytical solution is not 1D
-        # #plt.scatter(x_training_data, y_training_data, label='Training data', color='C1', s=25, zorder=5) 
-        # plt.xlabel('x (m)')
-        # plt.ylabel('Pressure P(x, t) (Pa)')
-        # plt.title('Neural Network Prediction vs Analytical Solution')
-        # plt.legend()
-        # plt.grid(True)
-        # plt.tight_layout()
-        # plt.show()
-
         x = np.linspace(0, self.Problem.L, numpoints)
 
         fig, ax = plt.subplots()
-        line, = ax.plot(x, self.Problem.AnalyticalSolution(x, self.Problem.startTime), lw=2)
+        y = self.Problem.AnalyticalSolution(x, self.Problem.startTime)
+        line, = ax.plot(x, y, lw=2)
         line2, = ax.plot(x, self.predict(self.np_to_th(np.array([[xi, self.Problem.startTime] for xi in x]))).detach().numpy(), lw=2, color='orange')
+        points = ax.scatter(x, y, label='Collocation points', color='blue', s=10, alpha=0.5)
         ax.set_xlabel('Position (m)')
 
         fig.subplots_adjust(bottom=0.25)
@@ -183,9 +170,17 @@ class PINN(nn.Module, BasicData):
         def update(val):
             line.set_ydata(self.Problem.AnalyticalSolution(x, time_slider.val))
             line2.set_ydata(self.predict(self.np_to_th(np.array([[xi, time_slider.val] for xi in x]))).detach().numpy())
+            points.set_offsets(np.c_[x, self.Problem.AnalyticalSolution(x, time_slider.val)])
             fig.canvas.draw_idle()
 
         time_slider.on_changed(update)
         fig.legend()
         fig.suptitle('Transient Darcy Flow in 1D Domain', y=0.95)
         plt.show()
+
+    def evalLossPINNatT(self, t):
+        total_loss = 0.0
+        for LossPINN in self.LossPINNVec:
+            total_loss += LossPINN.LossFunc(self) * LossPINN.Weight
+
+        return total_loss
