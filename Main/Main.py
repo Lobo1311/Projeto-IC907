@@ -1,13 +1,15 @@
 from NeuralNetwork import NeuralNetwork
 from NNClasses import *
 from DataSet import DataSet
-from NeuralNetwork_torch import ANN
-from LossPINN import LossPINN
+from NeuralNetwork_torch import PINN
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from DarcyTransientFlow import DarcyTransientFlow
+from NeuralNetwork_torch import LossPINN
+import torch.nn as nn
+import torch
 
 def main_nn_by_hand():
     # Real a and b for the line
@@ -41,7 +43,7 @@ def main_nn_by_hand():
 
     # Learning rate and number of epochs
     lr = 0.1
-    epochs = 100000
+    epochs = 1000
     # epochs = 40000
     decay_rate = 0  # 0.0 for no decay
     decay_step = 100000
@@ -51,8 +53,8 @@ def main_nn_by_hand():
     
     # Creating the neural network
     nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, decay_step=decay_step, optimizer=Optimizer_SGD, l2_regularization_weight=l2_regularization_weight, momentum=momentum)
-    # nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD_Decay, l2_regularization=False, l2_regularization_weight=1.e-4)
-    # nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD, l2_regularization=False, l2_regularization_weight=1.e-3)
+    #nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD_Decay, l2_regularization=False, l2_regularization_weight=1.e-4)
+    #nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD, l2_regularization=False, l2_regularization_weight=1.e-3)
 
     nn_layers = {
                 "layer_0": 
@@ -107,40 +109,87 @@ def main_nn_by_hand():
 
     a = 1
 
+def grad(outputs, inputs):
+  return torch.autograd.grad(outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True)[0]
     
 def main_nn_torch():
-    
-    # Real a and b for the line
-    seed = 42
-    np.random.seed(seed)
+    #* problem definition
+    L = 1.0       #* Length of the domain (m)
+    PL = 1e5      #* Left boundary pressure (Pa)
+    PR = 0.0      #* Right boundary pressure (Pa)
+    k = 1e-12    #* Permeability (m^2)
+    mu = 1e-3     #* Dynamic viscosity (Pa.s)
+    phi = 0.2     #* Porosity (-)
+    ct = 1e-9     #* Total compressibility (1/Pa)
+    t_start = 0.001  #* Initial time (s)
+    t_final = 1.0  #* Final time (s)
 
-    darcy_func: callable = ... # buid as a lambda func?
-    
-    xpts = np.linspace(0, 1, 70)
-    ypts = darcy_func(xpts)
+    numpoints = 100
 
-    # set the data set
-    data_set = DataSet(xpts, ypts)
-    data_set.add_noise(randomization_factor=1.)
-    
-    train_set, test_set = data_set.split(0.5) # maior numero de pontos de treino
+    problem = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct, startTime=t_start, endTime=t_final)
 
-    # initialize pinn loss funcs
-    my_pinn_loss: LossPINN = LossPINN() # the loss funcs must be change inside this class... it can be improved later
+    # xpts = np.array([[x, t] for t in np.linspace(t_start, t_final, numpoints) for x in np.linspace(0, L, numpoints)])
+    # ypts = np.array([problem.AnalyticalSolution(x, t) for x, t in xpts])
+
+    # # set the data set
+    # data_set = DataSet(xpts, ypts)
+    # data_set.add_noise(1.0)
+    
+    # train_set, test_set = data_set.split(0.5) # maior numero de pontos de treino
+
+    #* Boundary condition P(0, t) = PL
+    def loss_bc_left(model:PINN, numpoints:int=100):
+        x0 = np.array([[0, t] for t in np.linspace(model.Problem.startTime, model.Problem.endTime, numpoints)])
+        x0_torch = model.np_to_th(x0).requires_grad_(True)
+        P0_pred = model(x0_torch)
+
+        loss_bc_left = (P0_pred - model.Problem.PLeft)**2
+        loss_bc_left = torch.mean(loss_bc_left)
+
+        return loss_bc_left
+
+    #* Boundary condition P(L, t) = PR
+    def loss_bc_right(model:PINN, numpoints:int=100):
+        xL = np.array([[model.Problem.L, t] for t in np.linspace(model.Problem.startTime, model.Problem.endTime, numpoints)])
+        xL_torch = model.np_to_th(xL).requires_grad_(True)
+        PL_pred = model(xL_torch)
+
+        loss_bc_right = (PL_pred - model.Problem.PRight)**2
+        loss_bc_right = torch.mean(loss_bc_right)
+
+        return loss_bc_right
+
+    #* Physics loss (PDE residual)
+    def physics_loss(model:PINN):
+        X_collocation = np.array([[x, t] for t in np.linspace(t_start, t_final, numpoints) for x in np.linspace(0, L, numpoints)])
+        X_collocation_torch = model.np_to_th(X_collocation).requires_grad_(True)
+        P_pred = model(X_collocation_torch)
+        dPdt = grad(P_pred, X_collocation_torch)[:, 1:2]
+        dPdx = grad(P_pred, X_collocation_torch)[:, 0:1]
+        dPdx2 = grad(dPdx, X_collocation_torch)[:, 0:1]
+
+        pde = dPdt - (model.Problem.k / (model.Problem.mu * model.Problem.phi * model.Problem.ct)) * dPdx2
+
+        return torch.mean(pde**2)
+
 
     # set hyperparameters
     lr = 0.01
-    epochs = 300000
-    input_dim = 1
+    epochs = 1000
+    input_dim = 2
     output_dim = 1
-    hidden_layers = [200]
+    hidden_layers = [50, 50]
 
-    model = ANN(input_dim=input_dim, hidden_layers=hidden_layers, output_dim=output_dim, loss2=my_pinn_loss.bc_loss_fn, loss2_weight=1e0)
+    LossPINNVec = []
+    LossPINNVec.append(LossPINN(loss_bc_left, 0.1))
+    LossPINNVec.append(LossPINN(loss_bc_right, 0.1))
+    LossPINNVec.append(LossPINN(physics_loss, 0.1))
 
-    # model.train_nn(x, y)
+    model = PINN(input_dim, hidden_layers, output_dim, nn.ReLU, epochs, None, lr, LossPINNVec, problem)
 
-    # model.plot_loss()
-    # model.plot_prediction(x_limits=, x_training_data=, y_training_data=, analitycal_func=darcy_func)
+    model.train_nn()
+    model.plot_loss()
+    model.plot_prediction()
     ...
 
 def EquationTest():
@@ -158,6 +207,6 @@ def EquationTest():
 
 
 if __name__ == "__main__":
-    # main_nn_by_hand() # use to nn by hand validation
-    # main_nn_torch() # use to PINN validation
-    EquationTest()
+    #main_nn_by_hand() # use to nn by hand validation
+    main_nn_torch() # use to PINN validation
+    #EquationTest()
