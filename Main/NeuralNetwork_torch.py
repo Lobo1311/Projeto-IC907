@@ -59,7 +59,7 @@ class PINN(nn.Module, BasicData):
     - The forward() implementation accepts 1D tensors (unsqueezes to shape (N, input_dim)).
     """
     def __init__(self, input_dim:int, hidden_layers, output_dim:int, activation=nn.ReLU, epochs:int=5000, loss=nn.MSELoss(), lr:float=0.01, LossPINNVec:list[LossPINN]=[],
-                 Problem:DarcyTransientFlow=None):
+                 Problem:DarcyTransientFlow=None, parameter_discovery:list[str]=None):
         super().__init__()
 
         if Problem is None:
@@ -80,6 +80,19 @@ class PINN(nn.Module, BasicData):
         self.loss_history = np.zeros(epochs)
 
         self.LossPINNVec: list[LossPINN] = LossPINNVec
+
+        self.parameter_discovery: list[str] = parameter_discovery
+        self.unkown_parameters: list = list()
+        if self.parameter_discovery != None:
+            for parameter in self.parameter_discovery:
+                if parameter == "phi":
+                    self.unkown_parameters.append(torch.nn.Parameter(torch.tensor(self.Problem.phi, dtype=torch.float32), requires_grad=True))
+                if parameter == "k":
+                    self.unkown_parameters.append(torch.nn.Parameter(torch.tensor(self.Problem.k, dtype=torch.float32), requires_grad=True))
+                if parameter == "mu":
+                    self.unkown_parameters.append(torch.nn.Parameter(torch.tensor(self.Problem.mu, dtype=torch.float32), requires_grad=True))
+                if parameter == "ct":
+                    self.unkown_parameters.append(torch.nn.Parameter(torch.tensor(self.Problem.ct, dtype=torch.float32), requires_grad=True))
 
         self.DeactivateAttr()
 
@@ -106,7 +119,10 @@ class PINN(nn.Module, BasicData):
             X = self.np_to_th(x_train)
             y = self.np_to_th(y_train)
 
-        optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        if self.parameter_discovery != None:
+            optimizer = optim.Adam(list(self.model.parameters()) + self.unkown_parameters, lr=self.lr)
+        else:
+            optimizer = optim.Adam(list(self.model.parameters()), lr=self.lr)
 
         for epoch in range(self.epochs):
             self.train()
@@ -142,7 +158,7 @@ class PINN(nn.Module, BasicData):
         y = self.Problem.AnalyticalSolution(x, self.Problem.startTime)
         line, = ax.plot(x, y, lw=2)
         line2, = ax.plot(x, self.predict(self.np_to_th(np.array([[xi, self.Problem.startTime] for xi in x]))).detach().numpy(), lw=2, color='orange')
-        points = ax.scatter(x, y, label='Collocation points', color='blue', s=10, alpha=0.5)
+        # points = ax.scatter(x, y, label='Collocation points', color='blue', s=10, alpha=0.5)
         ax.set_xlabel('Position (m)')
 
         fig.subplots_adjust(bottom=0.25)
@@ -162,7 +178,7 @@ class PINN(nn.Module, BasicData):
         def update(val):
             line.set_ydata(self.Problem.AnalyticalSolution(x, time_slider.val))
             line2.set_ydata(self.predict(self.np_to_th(np.array([[xi, time_slider.val] for xi in x]))).detach().numpy())
-            points.set_offsets(np.c_[x, self.Problem.AnalyticalSolution(x, time_slider.val)])
+            # points.set_offsets(np.c_[x, self.Problem.AnalyticalSolution(x, time_slider.val)])
             fig.canvas.draw_idle()
 
         time_slider.on_changed(update)
