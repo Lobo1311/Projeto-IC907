@@ -109,6 +109,11 @@ def main_nn_by_hand():
     plt.show()
     
 def main_nn_torch():
+    # set seed to zero
+    seed = 0
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
     #* problem definition
     L = 1.0       #* Length of the domain (m)
     PL = 1.0      #* Left boundary pressure (Pa)
@@ -120,9 +125,27 @@ def main_nn_torch():
     t_start = 0.0001  #* Initial time (s)
     t_final = 0.1  #* Final time (s)
 
-    numpoints = 300
+    numpoints = 1000
 
     problem: DarcyTransientFlow = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct, startTime=t_start, endTime=t_final)
+
+    # training points
+    t_xpts = np.linspace(0, L, numpoints)
+    t_tpts = np.linspace(t_start, t_final, numpoints)
+    t_xtpts = []
+    t_ypts = []
+    for i in range(numpoints):
+        analytical = problem.AnalyticalSolution(t_xpts[i], t_tpts[i])
+        t_ypts.append(analytical)
+        t_xtpts.append([t_xpts[i], t_tpts[i]])
+    t_ypts = np.array(t_ypts)
+    t_xtpts = np.array(t_xtpts)
+
+    Data = DataSet(t_xtpts.reshape(numpoints, 2), t_ypts.reshape(numpoints, 1))
+    Data.add_noise(0.1) 
+
+    t_xtpts = Data.x
+    t_ypts = Data.y
 
     #* Gradient function
     def grad(outputs, inputs):
@@ -152,15 +175,6 @@ def main_nn_torch():
 
     #* Physics loss (PDE residual)
     def physics_loss(model:PINN):        
-        # x_collocation = np.linspace(0, model.Problem.L, numpoints)
-        # t_collocation = np.linspace(model.Problem.startTime, model.Problem.endTime, numpoints)
-
-        # x_collocation_torch = model.np_to_th(x_collocation).requires_grad_(True)
-        # t_collocation_torch = model.np_to_th(t_collocation).requires_grad_(True)
-
-        # xx, tt = torch.meshgrid(x_collocation_torch.flatten(), t_collocation_torch.flatten(), indexing='ij')
-        # X_collocation_torch = torch.stack((xx.flatten(), tt.flatten()), dim=1).requires_grad_(True)
-
         X_collocation = np.random.uniform(low=[0.0, model.Problem.startTime], high=[model.Problem.L, model.Problem.endTime], size=(numpoints, 2))
         X_collocation_torch = model.np_to_th(X_collocation).requires_grad_(True)
 
@@ -172,13 +186,51 @@ def main_nn_torch():
         dPdt = grads[:, 1:2]
         dPdx = grads[:, 0:1]    
         dPdx2 = grad(dPdx, X_collocation_torch)[:, 0:1]
+        
+        phi = None
+        k = None
+        mu = None
+        ct = None
+        if model.parameter_discovery != None:
+            index_parameter: int = 0
+            for parameter in model.parameter_discovery:
+                if parameter == "phi":
+                    phi = model.unkown_parameters[index_parameter]
+                if parameter == "k":
+                    k = model.unkown_parameters[index_parameter]
+                if parameter == "mu":
+                    mu = model.unkown_parameters[index_parameter]
+                if parameter == "ct":
+                    ct = model.unkown_parameters[index_parameter]
+                
+                index_parameter += 1
+        
+        if phi == None: phi = model.Problem.phi
+        if k == None: k = model.Problem.k
+        if mu == None: mu = model.Problem.mu
+        if ct == None: ct = model.Problem.ct
 
-        pde = dPdt - (model.Problem.k / (model.Problem.mu * model.Problem.phi * model.Problem.ct)) * dPdx2
+        pde = dPdt - (k / (mu * phi * ct)) * dPdx2
 
         return torch.mean(pde**2)
 
     #* Loss initial condition
     def loss_ic(model: PINN, numpoints=100):
+        
+        if model.parameter_discovery != None:
+            index_parameter: int = 0
+            for parameter in model.parameter_discovery:
+                if parameter == "phi":
+                    model.Problem.phi = float(model.unkown_parameters[index_parameter].detach().numpy())
+                if parameter == "k":
+                    model.Problem.k = float(model.unkown_parameters[index_parameter].detach().numpy())
+                if parameter == "mu":
+                    model.Problem.mu = float(model.unkown_parameters[index_parameter].detach().numpy())
+                if parameter == "ct":
+                    model.Problem.ct = float(model.unkown_parameters[index_parameter].detach().numpy())
+                
+                index_parameter += 1
+
         x = np.linspace(0, model.Problem.L, numpoints)
         X0 = np.stack([x, model.Problem.startTime*np.ones_like(x)], axis=1)
         X0_torch = model.np_to_th(X0).requires_grad_(True)
@@ -191,26 +243,36 @@ def main_nn_torch():
 
     # set hyperparameters
     lr = 0.01
-    epochs = 1000
+    epochs = 5000
     input_dim = 2
     output_dim = 1
-    hidden_layers = [50, 50, 50, 50]
+    # hidden_layers = [50, 50, 50, 50]
+    hidden_layers = [50, 50]
 
     LossPINNVec = []
-    LossPINNVec.append(LossPINN(loss_bc_left, 10))
-    LossPINNVec.append(LossPINN(loss_bc_right, 10))
-    LossPINNVec.append(LossPINN(physics_loss, 0.1))
-    LossPINNVec.append(LossPINN(loss_ic, 5))
+    LossPINNVec.append(LossPINN(loss_bc_left, 100))
+    LossPINNVec.append(LossPINN(loss_bc_right, 100))
+    LossPINNVec.append(LossPINN(physics_loss, 1))
+    LossPINNVec.append(LossPINN(loss_ic, 50))
 
-    model = PINN(input_dim, hidden_layers, output_dim, nn.Tanh, epochs, None, lr, LossPINNVec, problem)
+    model = PINN(input_dim, hidden_layers, output_dim, nn.Tanh, epochs, nn.MSELoss(), lr, LossPINNVec, problem)
+    # model = PINN(input_dim, hidden_layers, output_dim, nn.Tanh, epochs, None, lr, LossPINNVec, problem)
+    # parameter_discovery is a list of a single string ["phi"], ["k"], ["mu"], ["ct"]
+    # model = PINN(input_dim, hidden_layers, output_dim, nn.Tanh, epochs, None, lr, LossPINNVec, problem, parameter_discovery=["phi"])
 
-    model.train_nn()
+    model.train_nn(t_xtpts, t_ypts)
     model.plot_loss()
     model.plot_prediction()
 
     testVec = np.array([[0.5, t] for t in np.linspace(problem.startTime, problem.endTime, 10)])
     predVec = model.predict(model.np_to_th(testVec)).detach().numpy()
     print(predVec)
+
+    if model.parameter_discovery != None:
+        index_parameter: int = 0
+        for parameter in model.parameter_discovery:
+            print(f"Learned porosity {parameter} = ", float(model.unkown_parameters[index_parameter].detach()))   
+            index_parameter += 1
 
 def ParameterDiscovery():
     problem = DarcyTransientFlow(L=1.0, PLeft=1.0, PRight=0.0, k=1e-12, mu=1e-3, phi=0.2, ct=1e-9, startTime=0.001, endTime=0.07)
