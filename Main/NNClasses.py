@@ -137,8 +137,10 @@ class Optimizer_SGD(Optimizer):
     def update_params(self, layer:Layer_Dense):
         if self.momentum:
             if not hasattr(layer, 'weight_momentums'):
+                layer.ActivateAttr()
                 layer.weight_momentums = np.zeros_like(layer.weights)
                 layer.bias_momentums = np.zeros_like(layer.biases)
+                layer.DeactivateAttr()
 
             weight_updates = self.momentum * layer.weight_momentums - self.learning_rate * layer.dweights
             bias_updates = self.momentum * layer.bias_momentums - self.learning_rate * layer.dbiases
