@@ -5,6 +5,7 @@ from NeuralNetwork_torch import PINN
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
 
 from DarcyTransientFlow import DarcyTransientFlow
 from NeuralNetwork_torch import LossPINN
@@ -123,15 +124,6 @@ def main_nn_torch():
 
     problem: DarcyTransientFlow = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct, startTime=t_start, endTime=t_final)
 
-    # xpts = np.array([[x, t] for t in np.linspace(t_start, t_final, numpoints) for x in np.linspace(0, L, numpoints)])
-    # ypts = np.array([problem.AnalyticalSolution(x, t) for x, t in xpts])
-
-    # # set the data set
-    # data_set = DataSet(xpts, ypts)
-    # data_set.add_noise(1.0)
-    
-    # train_set, test_set = data_set.split(0.5) # maior numero de pontos de treino
-
     #* Gradient function
     def grad(outputs, inputs):
         return torch.autograd.grad(outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True)[0]
@@ -160,14 +152,17 @@ def main_nn_torch():
 
     #* Physics loss (PDE residual)
     def physics_loss(model:PINN):        
-        x_collocation = np.linspace(0, model.Problem.L, numpoints)
-        t_collocation = np.linspace(model.Problem.startTime, model.Problem.endTime, numpoints)
+        # x_collocation = np.linspace(0, model.Problem.L, numpoints)
+        # t_collocation = np.linspace(model.Problem.startTime, model.Problem.endTime, numpoints)
 
-        x_collocation_torch = model.np_to_th(x_collocation).requires_grad_(True)
-        t_collocation_torch = model.np_to_th(t_collocation).requires_grad_(True)
+        # x_collocation_torch = model.np_to_th(x_collocation).requires_grad_(True)
+        # t_collocation_torch = model.np_to_th(t_collocation).requires_grad_(True)
 
-        xx, tt = torch.meshgrid(x_collocation_torch.flatten(), t_collocation_torch.flatten(), indexing='ij')
-        X_collocation_torch = torch.stack((xx.flatten(), tt.flatten()), dim=1).requires_grad_(True)
+        # xx, tt = torch.meshgrid(x_collocation_torch.flatten(), t_collocation_torch.flatten(), indexing='ij')
+        # X_collocation_torch = torch.stack((xx.flatten(), tt.flatten()), dim=1).requires_grad_(True)
+
+        X_collocation = np.random.uniform(low=[0.0, model.Problem.startTime], high=[model.Problem.L, model.Problem.endTime], size=(numpoints, 2))
+        X_collocation_torch = model.np_to_th(X_collocation).requires_grad_(True)
 
         P_pred = model(X_collocation_torch)
 
@@ -196,7 +191,7 @@ def main_nn_torch():
 
     # set hyperparameters
     lr = 0.01
-    epochs = 500
+    epochs = 1000
     input_dim = 2
     output_dim = 1
     hidden_layers = [50, 50, 50, 50]
@@ -210,11 +205,57 @@ def main_nn_torch():
     model = PINN(input_dim, hidden_layers, output_dim, nn.Tanh, epochs, None, lr, LossPINNVec, problem)
 
     model.train_nn()
-
-    # model.evalLossPINNatT(0.01)
-
     model.plot_loss()
     model.plot_prediction()
+
+    testVec = np.array([[0.5, t] for t in np.linspace(problem.startTime, problem.endTime, 10)])
+    predVec = model.predict(model.np_to_th(testVec)).detach().numpy()
+    print(predVec)
+
+def ParameterDiscovery():
+    problem = DarcyTransientFlow(L=1.0, PLeft=1.0, PRight=0.0, k=1e-12, mu=1e-3, phi=0.2, ct=1e-9, startTime=0.001, endTime=0.07)
+
+    x_obs = torch.rand(40).view(-1,1) * problem.L
+    t_obs = torch.rand(40).view(-1,1) * (problem.endTime - problem.startTime) + problem.startTime
+    x_obs = x_obs.flatten()
+    t_obs = t_obs.flatten()
+
+    mesh = torch.meshgrid(x_obs, t_obs, indexing='ij')
+    X_obs = torch.stack((mesh[0].flatten(), mesh[1].flatten()), dim=1)
+
+    P_obs = np.array([problem.AnalyticalSolution(x_obs.numpy(), t.item()) for t in t_obs])
+    P_obs_with_noise = P_obs + 0.04 * torch.randn_like(x_obs).numpy()
+
+    x = np.linspace(0, problem.L, 100)
+
+    fig, ax = plt.subplots()
+    line, = ax.plot(x, problem.AnalyticalSolution(x, t_obs[0].item()), lw=2)
+    points = ax.scatter(x_obs.numpy(), P_obs_with_noise[0], label='Data points', color='blue', s=10, alpha=0.5)
+    ax.set_xlabel('Position (m)')
+
+    fig.subplots_adjust(bottom=0.25)
+
+    ax_time = fig.add_axes([0.25, 0.1, 0.65, 0.03])
+    time_slider = Slider(
+        ax = ax_time,
+        label = 'Time (s)',
+        valmin = problem.startTime,
+        valmax = problem.endTime,
+        valinit = problem.startTime,
+        valstep=t_obs.detach().numpy()
+    )
+
+    def update(val):
+        line.set_ydata(problem.AnalyticalSolution(x, time_slider.val))
+        points.set_offsets(np.c_[x_obs.numpy(), P_obs_with_noise[np.where(t_obs.numpy() == time_slider.val)[0][0]]])
+        fig.canvas.draw_idle()
+
+    time_slider.on_changed(update)
+
+    fig.suptitle('Transient Darcy Flow in 1D Domain', y=0.95)
+    plt.show()
+
+    a = 1
 
 def EquationTest():
     L = 1.0
@@ -232,5 +273,6 @@ def EquationTest():
 
 if __name__ == "__main__":
     #main_nn_by_hand() # use to nn by hand validation
-    main_nn_torch() # use to PINN validation
+    #main_nn_torch() # use to PINN validation
+    ParameterDiscovery()
     #EquationTest()

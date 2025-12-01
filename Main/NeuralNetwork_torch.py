@@ -119,25 +119,14 @@ class PINN(nn.Module, BasicData):
                 loss_value += self.loss(y_pred, y)
 
             for LossPINN in self.LossPINNVec:
-                loss_value += LossPINN.LossFunc(self) * LossPINN.Weight #! check this
+                loss_value += LossPINN.LossFunc(self) * LossPINN.Weight
 
             loss_value.backward()
 
             optimizer.step()
             self.loss_history[epoch] = loss_value.item()
             if epoch % np.round(self.epochs/10) == 0 or epoch == self.epochs-1:
-                lv = loss_value.item()
-                entries = [("Total Loss", lv)]
-                # if self.loss2 is not None:
-                #     entries.append(("Loss2", loss2_value.item()))
-                # if self.loss3 is not None:
-                #     entries.append(("Loss3", loss3_value.item()))
-                parts = []
-                for name, val in entries:
-                    parts.append(f"{name}: {val:.2e}" if val < 1e-7 else f"{name}: {val:.8f}")
-                print(f"Epoch {epoch+1}/{self.epochs}, " + ", ".join(parts))
-
-        #return loss_value.item()
+                print(f"Epoch {epoch+1}/{self.epochs}, Total Loss: {loss_value.item():.8f}")
 
     def plot_loss(self):
         plt.plot(self.loss_history)
