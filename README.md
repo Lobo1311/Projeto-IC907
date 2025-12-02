@@ -25,16 +25,28 @@ Na seção seguinte é mostrada como utilizar o código, para a rede ANN desenvo
 
 Para utilização do código, o arquivo Main.py deve ser utilizado. Deve-se seguir o seguinte procedimento:
 
-1 . No arquivo Main.py, encontrar o condicional <if __name__ == "__main__":> e definir o tipo de treinamento desejado.
-  1.1 Para utilização da rede neural desenvolvida do zero, chamar o método <main_nn_by_hand()>.
-  1.2 Para utilização da PINN, chamar o método <main_nn_torch()>;
-2. Se rede neural do zero:
-  2.1 Procurar por "#* Hyperparameters definition" para encontrar os parâmetros passiveis de alteração (estes podem ser alterados conforme valores apresentados em relatório para reprodução de resultados).
-  2.2 NOTA: O restante do método <main_nn_by_hand()> não precisa ser alterado.
-3. Se PINN:
-  3.1 Procurar por "#* problem definition" para alteração dos parâmetros do problema de Darcy (não devem ser alterados para reprodução de resultados).
-  3.2 Procurar por "#* Hyperparameters definition" para encontrar os parâmetros passiveis de alteração (estes podem ser alterados conforme valores apresentados em relatório para reprodução de resultados).
-  3.3 NOTA: O restante do método <main_nn_torch()> não precisa ser alterado.
+1 . No arquivo Main.py, encontrar o condicional <if __name__ == "__main__":> e definir o tipo de treinamento desejado: 
+
+Para utilização da rede neural desenvolvida do zero, chamar o método <main_nn_by_hand()>.
+  
+Para utilização da PINN, chamar o método <main_nn_torch()>.
+
+  
+2 . Se rede neural do zero:
+
+Procurar por "#* Hyperparameters definition" para encontrar os parâmetros passiveis de alteração (estes podem ser alterados conforme valores apresentados em relatório para reprodução de resultados).
+  
+NOTA: O restante do método <main_nn_by_hand()> não precisa ser alterado.
+
+  
+3 . Se PINN:
+   
+Procurar por "#* problem definition" para alteração dos parâmetros do problema de Darcy (não devem ser alterados para reprodução de resultados).
+  
+Procurar por "#* Hyperparameters definition" para encontrar os parâmetros passiveis de alteração (estes podem ser alterados conforme valores apresentados em relatório para reprodução de resultados).
+  
+O restante do método <main_nn_torch()> não precisa ser alterado.
+  
 
 
 ## Dependências
