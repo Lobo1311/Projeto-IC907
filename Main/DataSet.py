@@ -35,7 +35,8 @@ class DataSet(BasicData):
         ypts = copy.deepcopy(self.y)
         num_points: int = len(ypts)
         
-        y_randomized = ypts + (np.random.normal(-1., 1., num_points) * randomization_factor)
+        noise_points = (np.random.normal(-1., 1., num_points) * randomization_factor)
+        y_randomized = ypts + noise_points.reshape(num_points, 1)
         
         self.y = copy.deepcopy(y_randomized)
         
