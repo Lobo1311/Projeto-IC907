@@ -270,9 +270,72 @@ def EquationTest():
 
     problem.Plot()
 
+def SmallNetwork():
+    xpts = np.linspace(-2, 2, 100)
+    npts = len(xpts)
+
+    # Generating dataw
+    w = 5.0
+    yreal = w * xpts
+
+    Data = DataSet(xpts.reshape(npts, 1), yreal.reshape(npts, 1))
+    train_set, test_set = Data.split(1)
+
+    # Learning rate and number of epochs
+    lr = 0.1
+    epochs = 1000
+    decay_rate = 0.0  # 0.0 for no decay
+    decay_step = 3
+
+    momentum = 0.00  # 0.0 for no momentum
+    l2_regularization_weight = 0.0  # 0.0 for no L2 regularization
+    
+    # Creating the neural network
+    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, decay_step=decay_step, optimizer=Optimizer_SGD, l2_regularization_weight=l2_regularization_weight, momentum=momentum)
+
+    nn_layers = {
+                "layer_0": 
+                    {
+                        "neurons": 5, 
+                        "activation": Activation_ReLU(),
+                        "dropout": [True, 0.2],
+                    },
+                "layer_1": 
+                    {
+                        "neurons": 1, 
+                        "activation": None,
+                        "dropout": [False]
+                    }
+                }
+    
+    nn.build_nn(nn_layers)
+    
+    # Training the neural network
+    nn.train(train_set, test_set)
+
+    # Plotting results
+    nn.plot_loss()
+
+    for i, layer in enumerate(nn.layers):
+        if isinstance(layer, Layer_Dense):
+            print(f"Layer {i} weights:\n{layer.weights}\n")
+            print(f"Layer {i} biases:\n{layer.biases}\n")
+
+
+    plt.plot(xpts, yreal, '-', color='orange', label='True function')
+    plt.scatter(train_set.x, train_set.y, s = 20, label='Train set')
+    plt.scatter(test_set.x, test_set.y, s = 20, label='Test set')
+    y_pred = nn.predict(xpts.reshape(-1, 1))
+    plt.plot(xpts, y_pred.flatten(),  color = 'green', label='NN prediction')
+
+    plt.title(f'Fit with neural net')
+    plt.legend()
+    plt.show()
+
 
 if __name__ == "__main__":
     #main_nn_by_hand() # use to nn by hand validation
     #main_nn_torch() # use to PINN validation
-    ParameterDiscovery()
+    #ParameterDiscovery()
     #EquationTest()
+    SmallNetwork()
