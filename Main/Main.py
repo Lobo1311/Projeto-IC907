@@ -12,16 +12,18 @@ from NeuralNetwork_torch import LossPINN
 import torch.nn as nn
 import torch
 
+
+#### main methods: make a choince in the if statement ####
+
 def main_nn_by_hand():
-    # Real a and b for the line
+    #* set seed to zero
     seed = 0
     np.random.seed(seed)
-
+    #* set the data points (all points)
     xpts = np.linspace(-2, 3, 100)
     set_xnew = np.linspace(-2, 3, 1000)
     npts = len(xpts)
-
-    # Generating data
+    #* define the real function
     yreal = (
             np.sin(12*np.pi*xpts)
             + 0.3*np.cos(4*np.pi*xpts)      
@@ -32,32 +34,22 @@ def main_nn_by_hand():
             np.sin(xpts*np.pi)
             # +  0.3*np.random.randn(npts)
             # + 0.3*np.cos(4*np.pi*xpts)      
-           
         )
     
     yreal = np.where(np.sin(15 * xpts) + 0.3 * xpts**2 > 0, 1, 0)
     # yreal = (np.sin(10*xpts)) ## Second function
 
-
+    #* set the data set and split between training and test data
     Data = DataSet(xpts.reshape(npts, 1), yreal.reshape(npts, 1))
     train_set, test_set = Data.split(0.7) 
-
-    # Learning rate and number of epochs
-    lr = 0.1
-    epochs = 1000
-    # epochs = 40000
-    decay_rate = 0  # 0.0 for no decay
-    decay_step = 100000
-
-    momentum = 0.00  # 0.0 for no momentum
-    l2_regularization_weight = 0.0  # 0.0 for no L2 regularization
-    
-    # Creating the neural network
-    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, decay_step=decay_step, optimizer=Optimizer_SGD, l2_regularization_weight=l2_regularization_weight, momentum=momentum)
-    #nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD_Decay, l2_regularization=False, l2_regularization_weight=1.e-4)
-    #nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, optimizer=Optimizer_SGD, l2_regularization=False, l2_regularization_weight=1.e-3)
-
-    nn_layers = {
+    #* Hyperparameters definition
+    lr = 0.1                            #* learning rate
+    epochs = 1000                       #* number of epochs
+    decay_rate = 0                      #* set as 0.0 for no decay
+    decay_step = 100000                 #* if dacay is zero, is it not used
+    momentum = 0.00                     #* set as 0.0 for no momentum
+    l2_regularization_weight = 0.0      #* set as 0.0 for no L2 regularization
+    nn_layers = {                       #* set the dense layers configuration
                 "layer_0": 
                     {
                         "neurons": 500, 
@@ -84,45 +76,64 @@ def main_nn_by_hand():
                     }
                 }
     
+    ##### SET THE PINN PROBLEM ######
+    #* set the ANNN model
+    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, decay_step=decay_step, optimizer=Optimizer_SGD, l2_regularization_weight=l2_regularization_weight, momentum=momentum)
+    #* build the ANN layers
     nn.build_nn(nn_layers)
-    
-    # Training the neural network
+    #* training the neural network
     nn.train(train_set, test_set)
-
-    # Plotting results
+    #* plotting loss curve
     nn.plot_loss()
-
-    # plt.scatter(xpts, yreal, label='True data')
-
+    #* plot function curves (with true, train and test data)
     plt.plot(xpts, yreal, '-', color='orange', label='True function')
     plt.scatter(train_set.x, train_set.y, s = 20, label='Train set')
     plt.scatter(test_set.x, test_set.y, s = 20, label='Test set')
 
-    # plt.scatter(test_set.x, test_set.y, label='Test set')
-
     y_pred = nn.predict(set_xnew.reshape(-1, 1))
     plt.plot(set_xnew, y_pred.flatten(),  color = 'green', label='NN prediction')
-
  
     plt.title(f'Fit with neural net')
     plt.legend()
     plt.show()
     
 def main_nn_torch():
+    #* set seed to zero
+    seed = 0
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
     #* problem definition
-    L = 1.0       #* Length of the domain (m)
-    PL = 1.0      #* Left boundary pressure (Pa)
-    PR = 0.0      #* Right boundary pressure (Pa)
-    k = 1e-12    #* Permeability (m^2)
-    mu = 1e-3     #* Dynamic viscosity (Pa.s)
-    phi = 0.2     #* Porosity (-)
-    ct = 1e-9     #* Total compressibility (1/Pa)
-    t_start = 0.0001  #* Initial time (s)
-    t_final = 0.1  #* Final time (s)
+    L = 1.0             #* Length of the domain (m)
+    PL = 1.0            #* Left boundary pressure (Pa)
+    PR = 0.0            #* Right boundary pressure (Pa)
+    k = 1e-12           #* Permeability (m^2)
+    mu = 1e-3           #* Dynamic viscosity (Pa.s)
+    phi = 0.2           #* Porosity (-)
+    ct = 1e-9           #* Total compressibility (1/Pa)
+    t_start = 0.0001    #* Initial time (s)
+    t_final = 0.1       #* Final time (s)
 
-    numpoints = 300
+    #* Hyperparameters definition
+    lr = 0.01                           #* learning rate
+    epochs = 5000                       #* number of epochs
+    input_dim = 2                       #* number of input data (neurons in the first layer)
+    output_dim = 1                      #* number of outputs (neurons in the last layer)
+    hidden_layers = [50, 50, 50, 50]    #* dense layer setup
+    parameter_discovery = ["phi"]       #* to use parameter discovery set this variables as : ["phi"], ["k"], ["mu"] or ["ct"] ; to not use set as None
+    noise_factor = 0.1                  #* it scales a random noise evaluated between -1 and 1
 
-    problem: DarcyTransientFlow = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct, startTime=t_start, endTime=t_final)
+    numpoints = 50000                   #* number of samples
+
+    bc_loss_weight = 100                #* weight of the boundary condition loss function
+    ic_loss_weight = 50                 #* weight of the initial condition loss function
+    physical_loss_weight = 1            #* weight of the differential equation loss function
+
+    activation_func = nn.Tanh           #* type of activation function
+    loss_func = nn.MSELoss()            #* type of loss function
+
+
+    ##### IMPORTANTAT METHODS TO PINN ######
 
     #* Gradient function
     def grad(outputs, inputs):
@@ -152,15 +163,6 @@ def main_nn_torch():
 
     #* Physics loss (PDE residual)
     def physics_loss(model:PINN):        
-        # x_collocation = np.linspace(0, model.Problem.L, numpoints)
-        # t_collocation = np.linspace(model.Problem.startTime, model.Problem.endTime, numpoints)
-
-        # x_collocation_torch = model.np_to_th(x_collocation).requires_grad_(True)
-        # t_collocation_torch = model.np_to_th(t_collocation).requires_grad_(True)
-
-        # xx, tt = torch.meshgrid(x_collocation_torch.flatten(), t_collocation_torch.flatten(), indexing='ij')
-        # X_collocation_torch = torch.stack((xx.flatten(), tt.flatten()), dim=1).requires_grad_(True)
-
         X_collocation = np.random.uniform(low=[0.0, model.Problem.startTime], high=[model.Problem.L, model.Problem.endTime], size=(numpoints, 2))
         X_collocation_torch = model.np_to_th(X_collocation).requires_grad_(True)
 
@@ -172,45 +174,109 @@ def main_nn_torch():
         dPdt = grads[:, 1:2]
         dPdx = grads[:, 0:1]    
         dPdx2 = grad(dPdx, X_collocation_torch)[:, 0:1]
+        
+        phi = None
+        k = None
+        mu = None
+        ct = None
+        if model.parameter_discovery != None:
+            index_parameter: int = 0
+            for parameter in model.parameter_discovery:
+                if parameter == "phi":
+                    phi = model.unkown_parameters[index_parameter]
+                if parameter == "k":
+                    k = model.unkown_parameters[index_parameter]
+                if parameter == "mu":
+                    mu = model.unkown_parameters[index_parameter]
+                if parameter == "ct":
+                    ct = model.unkown_parameters[index_parameter]
+                
+                index_parameter += 1
+        
+        if phi == None: phi = model.Problem.phi
+        if k == None: k = model.Problem.k
+        if mu == None: mu = model.Problem.mu
+        if ct == None: ct = model.Problem.ct
 
-        pde = dPdt - (model.Problem.k / (model.Problem.mu * model.Problem.phi * model.Problem.ct)) * dPdx2
+        pde = dPdt - (k / (mu * phi * ct)) * dPdx2
 
         return torch.mean(pde**2)
 
     #* Loss initial condition
     def loss_ic(model: PINN, numpoints=100):
+        
+        if model.parameter_discovery != None:
+            index_parameter: int = 0
+            for parameter in model.parameter_discovery:
+                if parameter == "phi":
+                    model.Problem.phi = float(model.unkown_parameters[index_parameter].detach().numpy())
+                if parameter == "k":
+                    model.Problem.k = float(model.unkown_parameters[index_parameter].detach().numpy())
+                if parameter == "mu":
+                    model.Problem.mu = float(model.unkown_parameters[index_parameter].detach().numpy())
+                if parameter == "ct":
+                    model.Problem.ct = float(model.unkown_parameters[index_parameter].detach().numpy())
+                
+                index_parameter += 1
+
         x = np.linspace(0, model.Problem.L, numpoints)
         X0 = np.stack([x, model.Problem.startTime*np.ones_like(x)], axis=1)
         X0_torch = model.np_to_th(X0).requires_grad_(True)
 
         P_init = np.array([model.Problem.AnalyticalSolution(xi, model.Problem.startTime) for xi in x])
-        P_init = torch.tensor(P_init[:, None], dtype=torch.float32)  # shape (numpoints, 1)
+        P_init = torch.tensor(P_init[:, None], dtype=torch.float32) 
 
         P_pred = model(X0_torch)
         return torch.mean((P_pred - P_init)**2)
 
-    # set hyperparameters
-    lr = 0.01
-    epochs = 1000
-    input_dim = 2
-    output_dim = 1
-    hidden_layers = [50, 50, 50, 50]
+    #* Create the training points
+    def training_points(problem: DarcyTransientFlow, numpoints=100):
+        # training points
+        t_xpts = np.linspace(0, L, numpoints)
+        t_tpts = np.linspace(t_start, t_final, numpoints)
+        t_xtpts = []
+        t_ypts = []
+        for i in range(numpoints):
+            analytical = problem.AnalyticalSolution(t_xpts[i], t_tpts[i])
+            t_ypts.append(analytical)
+            t_xtpts.append([t_xpts[i], t_tpts[i]])
+        t_ypts = np.array(t_ypts)
+        t_xtpts = np.array(t_xtpts)
+    
+        return t_xtpts, t_ypts
 
+
+    ##### SET THE PINN PROBLEM ######
+
+    #* set the differential equation
+    problem: DarcyTransientFlow = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct, startTime=t_start, endTime=t_final)
+    #* set the training points
+    xtpts, ypts = training_points(problem, numpoints)
+    #* set the data set and add noise to the training points
+    Data = DataSet(xtpts.reshape(numpoints, 2), ypts.reshape(numpoints, 1))
+    Data.add_noise(noise_factor) 
+    xtpts = Data.x
+    ypts = Data.y
+    #* create the PINN vector of losses (boundary, initial condition and physical function)
     LossPINNVec = []
-    LossPINNVec.append(LossPINN(loss_bc_left, 10))
-    LossPINNVec.append(LossPINN(loss_bc_right, 10))
-    LossPINNVec.append(LossPINN(physics_loss, 0.1))
-    LossPINNVec.append(LossPINN(loss_ic, 5))
-
-    model = PINN(input_dim, hidden_layers, output_dim, nn.Tanh, epochs, None, lr, LossPINNVec, problem)
-
-    model.train_nn()
+    LossPINNVec.append(LossPINN(loss_bc_left, bc_loss_weight))
+    LossPINNVec.append(LossPINN(loss_bc_right, bc_loss_weight))
+    LossPINNVec.append(LossPINN(physics_loss, physical_loss_weight))
+    LossPINNVec.append(LossPINN(loss_ic, ic_loss_weight))
+    #* set the PINN model
+    model = PINN(input_dim, hidden_layers, output_dim, activation_func, epochs, loss_func, lr, LossPINNVec, problem, parameter_discovery=parameter_discovery)
+    #* train the PINN model and plot it
+    model.train_nn(xtpts, ypts)
     model.plot_loss()
     model.plot_prediction()
+    #* print the learned parameter value
+    if model.parameter_discovery != None:
+        index_parameter: int = 0
+        for parameter in model.parameter_discovery:
+            print(f"\n >> Learned {parameter} = ", float(model.unkown_parameters[index_parameter].detach()))   
+            index_parameter += 1
 
-    testVec = np.array([[0.5, t] for t in np.linspace(problem.startTime, problem.endTime, 10)])
-    predVec = model.predict(model.np_to_th(testVec)).detach().numpy()
-    print(predVec)
+
 
 def ParameterDiscovery():
     problem = DarcyTransientFlow(L=1.0, PLeft=1.0, PRight=0.0, k=1e-12, mu=1e-3, phi=0.2, ct=1e-9, startTime=0.001, endTime=0.07)
@@ -257,22 +323,73 @@ def ParameterDiscovery():
 
     a = 1
 
-def EquationTest():
-    L = 1.0
-    PL = 1e5      #* Left boundary pressure (Pa)
-    PR = 0.0      #* Right boundary pressure (Pa)
-    k = 1e-12    #* Permeability (m^2)
-    mu = 1e-3     #* Dynamic viscosity (Pa.s)
-    phi = 0.2     #* Porosity (-)
-    ct = 1e-9     #* Total compressibility (1/Pa)
+def SmallNetwork():
+    xpts = np.linspace(-2, 2, 100)
+    npts = len(xpts)
 
-    problem = DarcyTransientFlow(L, PL, PR, k, mu, phi, ct)
+    # Generating dataw
+    w = 5.0
+    yreal = w * xpts
 
-    problem.Plot()
+    Data = DataSet(xpts.reshape(npts, 1), yreal.reshape(npts, 1))
+    train_set, test_set = Data.split(1)
 
+    # Learning rate and number of epochs
+    lr = 0.1
+    epochs = 1000
+    decay_rate = 0.0  # 0.0 for no decay
+    decay_step = 3
+
+    momentum = 0.00  # 0.0 for no momentum
+    l2_regularization_weight = 0.0  # 0.0 for no L2 regularization
+    
+    # Creating the neural network
+    nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, decay_step=decay_step, optimizer=Optimizer_SGD, l2_regularization_weight=l2_regularization_weight, momentum=momentum)
+
+    nn_layers = {
+                "layer_0": 
+                    {
+                        "neurons": 5, 
+                        "activation": Activation_ReLU(),
+                        "dropout": [True, 0.2],
+                    },
+                "layer_1": 
+                    {
+                        "neurons": 1, 
+                        "activation": None,
+                        "dropout": [False]
+                    }
+                }
+    
+    nn.build_nn(nn_layers)
+    
+    # Training the neural network
+    nn.train(train_set, test_set)
+
+    # Plotting results
+    nn.plot_loss()
+
+    for i, layer in enumerate(nn.layers):
+        if isinstance(layer, Layer_Dense):
+            print(f"Layer {i} weights:\n{layer.weights}\n")
+            print(f"Layer {i} biases:\n{layer.biases}\n")
+
+
+    plt.plot(xpts, yreal, '-', color='orange', label='True function')
+    plt.scatter(train_set.x, train_set.y, s = 20, label='Train set')
+    plt.scatter(test_set.x, test_set.y, s = 20, label='Test set')
+    y_pred = nn.predict(xpts.reshape(-1, 1))
+    plt.plot(xpts, y_pred.flatten(),  color = 'green', label='NN prediction')
+
+    plt.title(f'Fit with neural net')
+    plt.legend()
+    plt.show()
+
+
+### USE IT TO CHAGE FOR BY HAND ANN OR PINN ###
 
 if __name__ == "__main__":
     #main_nn_by_hand() # use to nn by hand validation
-    #main_nn_torch() # use to PINN validation
-    ParameterDiscovery()
-    #EquationTest()
+    main_nn_torch() # use to PINN validation
+    #ParameterDiscovery()
+    #SmallNetwork()

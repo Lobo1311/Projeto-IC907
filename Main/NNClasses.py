@@ -6,7 +6,7 @@ class Activation_ReLU(Layer):
         super().__init__()
         self.DeactivateAttr()
 
-    def forward(self, inputs:np.ndarray):
+    def forward(self, inputs:np.ndarray, isTraining:bool=True):
         self.inputs = inputs #* Save inputs for backpropagation
         self.output = np.maximum(0, inputs)
 
@@ -63,7 +63,7 @@ class Layer_Dense(Layer):
 
         self.DeactivateAttr()
 
-    def forward(self, inputs:np.ndarray):
+    def forward(self, inputs:np.ndarray, isTraining:bool=True):
         self.inputs = inputs #* Save inputs for backpropagation
         self.output = inputs @ self.weights + self.biases
 
@@ -73,28 +73,21 @@ class Layer_Dense(Layer):
         self.dbiases = np.sum(dvalues, axis = 0, keepdims = True)
 
 class Layer_Dropout(Layer):
-    def __init__(self, is_training_mode: bool = False, dropout_prob: float = 0.4):
+    def __init__(self, dropout_prob: float = 0.4):
         super().__init__()
 
         if not 0.0 <= dropout_prob <= 1.0:
             raise ValueError("Dropout probability must be between 0 and 1.")
 
-        self.is_training_mode: bool = is_training_mode
         self.dropout_prob: float = dropout_prob
         self.dropout_mask: float = None
 
         self.DeactivateAttr()
 
-    def forward(self, inputs:np.ndarray):
-        if self.is_training_mode:
-            self.dropout_mask = np.random.binomial(1, (1-self.dropout_prob), size=inputs.shape) / (1-self.dropout_prob)
-            self.inputs = inputs #* Save inputs for backpropagation
-            self.output = inputs * self.dropout_mask
-
-        else:
-            self.dropout_mask = np.ones_like(inputs)
-            self.inputs = inputs #* Save inputs for backpropagation
-            self.output = inputs
+    def forward(self, inputs:np.ndarray, isTraining:bool=True):
+        self.inputs = inputs #* Save inputs for backpropagation
+        self.dropout_mask = np.random.binomial(1, (1-self.dropout_prob), size=inputs.shape) / (1-self.dropout_prob) if isTraining else np.ones_like(inputs)
+        self.output = inputs * self.dropout_mask
 
     # Backward pass
     def backward(self, dvalues:np.ndarray):

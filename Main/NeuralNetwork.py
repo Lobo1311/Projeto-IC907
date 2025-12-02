@@ -19,7 +19,7 @@ class NeuralNetwork(BasicData):
 
         self.LastLayerSize:int = inputSize
 
-        self.is_train_mode: bool = True
+        self.IsTraining: bool = True
         # self.l2_regularization: bool = l2_regularization
         self.l2_regularization_weight: float = l2_regularization_weight
     
@@ -37,11 +37,11 @@ class NeuralNetwork(BasicData):
         
         if activation: self.layers.append(activation)
 
-        if dropout[0]: self.layers.append(Layer_Dropout(self.is_train_mode, dropout[1] if len(dropout) > 1 else None))
+        if dropout[0]: self.layers.append(Layer_Dropout(dropout[1] if len(dropout) > 1 else None))
 
     def forward(self, inputs:np.ndarray):
         for layer in self.layers:
-            layer.forward(inputs)
+            layer.forward(inputs, self.IsTraining)
             inputs = layer.output
 
         return self.layers[-1].output
@@ -55,7 +55,7 @@ class NeuralNetwork(BasicData):
     
     def train(self, trainData:DataSet, testData:DataSet=None):
         # set train mode
-        self.is_train_mode = True
+        self.IsTraining = True
 
         if testData: self.LossVecTest = np.zeros(self.epochs)
         
@@ -108,11 +108,11 @@ class NeuralNetwork(BasicData):
                     print()
             
         # deactivate train mode
-        self.is_train_mode = False
+        self.IsTraining = False
 
     def predict(self, inputs:np.ndarray):
         # deactivate the train mode
-        self.is_train_mode = False
+        self.IsTraining = False
         # foward the inputs
         y_pred: np.ndarray = self.forward(inputs=inputs)
 
@@ -149,6 +149,3 @@ class NeuralNetwork(BasicData):
             plt.ylabel("Ratio")
             plt.legend()
             plt.show()
-
-
-        

@@ -34,7 +34,7 @@ class Layer(BasicData, metaclass=ABCMeta):
         self.dinputs:np.ndarray = None
 
     @abstractmethod
-    def forward(self, inputs):
+    def forward(self, inputs, isTraining:bool=True):
         raise NotImplementedError("Method must be implemented in subclass.")
     
     @abstractmethod
@@ -56,7 +56,7 @@ class Optimizer(BasicData, metaclass=ABCMeta):
         super().__init__()
 
         self.learning_rate:float = -123456789.0
-        self.decay_rate:float=0.0
+        self.decay_rate:float = 0.0
         self.decay_step:int = 100000
         self.interation:int = 0
         self.momentum:float = 0.0
