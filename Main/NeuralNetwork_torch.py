@@ -16,31 +16,6 @@ class LossPINN(BasicData):
 
         self.DeactivateAttr()
 
-    # # implement each boundary or PINN loss funcs at this class following the struture of classes below 
-    # def bc_loss_fn(model: nn.Module, x_train, y_pred: np.ndarray=None):
-    #     # x0 = torch.tensor([[0.]], requires_grad=True)
-    #     # v0 = model(x0)
-
-    #     # dv0 = torch.autograd.grad(v0, x0, grad_outputs=torch.ones_like(v0), create_graph=True)[0]
-
-    #     # bc_loss = v0.pow(2).mean() + dv0.pow(2).mean()
-
-    #     bc_loss = 0.
-
-    #     return bc_loss
-    
-    # def pinn_loss_fn(model: nn.Module, x_train: np.ndarray, y_pred: np.ndarray=None):
-    #     # dv0 = torch.autograd.grad(y_pred, x_train, grad_outputs=torch.ones_like(y_pred), create_graph=True)[0]
-    #     # dv1 = torch.autograd.grad(dv0, x_train, grad_outputs=torch.ones_like(dv0), create_graph=True)[0]
-
-    #     # pinn_loss = (dv1 + P * (l - x_train) / (E*I)).pow(2).mean()
-
-    #     pinn_loss = 0.
-
-    #     return pinn_loss
-
-
-
 class PINN(nn.Module, BasicData):
     """
     Feed-forward neural network with configurable hidden layers.
@@ -58,8 +33,8 @@ class PINN(nn.Module, BasicData):
     - Uses ReLU (or provided activation) after each hidden layer and a linear output layer.
     - The forward() implementation accepts 1D tensors (unsqueezes to shape (N, input_dim)).
     """
-    def __init__(self, input_dim:int, hidden_layers, output_dim:int, activation=nn.ReLU, epochs:int=5000, loss=nn.MSELoss(), lr:float=0.01, LossPINNVec:list[LossPINN]=[],
-                 Problem:DarcyTransientFlow=None, parameter_discovery:list[str]=None):
+    def __init__(self, input_dim:int, hidden_layers, output_dim:int, activation=nn.ReLU, epochs:int=5000, loss=nn.MSELoss(), lr:float=0.01, 
+                 LossPINNVec:list[LossPINN]=[], Problem:DarcyTransientFlow=None, parameter_discovery:list[str]=None):
         super().__init__()
 
         if Problem is None:
@@ -73,10 +48,9 @@ class PINN(nn.Module, BasicData):
         layers = []
         for i in range(len(sizes) - 1):
             layers.append(nn.Linear(sizes[i], sizes[i+1]))
-            # add activation after every hidden layer (not after final output layer)
             if i < len(sizes) - 2:
                 layers.append(activation())
-        self.model = nn.Sequential(*layers) # * is the unpacking operator
+        self.model = nn.Sequential(*layers)
         self.loss_history = np.zeros(epochs)
 
         self.LossPINNVec: list[LossPINN] = LossPINNVec
@@ -100,19 +74,13 @@ class PINN(nn.Module, BasicData):
         return self.model(x)
 
     def predict(self, x) -> torch.Tensor:
-        self.eval() # Puts the module and all its submodules into evaluation mode (sets their internal flag training = False).
-        with torch.inference_mode(): # Disables autograd (no gradient computation) and also disables some autograd bookkeeping
+        self.eval() 
+        with torch.inference_mode(): 
             return self.forward(x)
 
     def np_to_th(self, x):
-        """
-        Convert a NumPy array to a PyTorch tensor.
-        """
         n_samples = len(x)
-
-        return torch.from_numpy(x).to(torch.float).reshape(n_samples,-1).requires_grad_(True) # reshape to (n_samples, input_dim) | -1 infers the second dimension
-        # -1 also means “whatever dimension size is needed so that the total number of elements stays the same.”
-        # requires_grad_(True) is important for PINNs since we need gradients w.r.t. inputs for computing derivatives
+        return torch.from_numpy(x).to(torch.float).reshape(n_samples,-1).requires_grad_(True)
 
     def train_nn(self, x_train:np.ndarray=None, y_train:np.ndarray=None):  
         if x_train is not None and y_train is not None: 
@@ -141,7 +109,7 @@ class PINN(nn.Module, BasicData):
 
             optimizer.step()
             self.loss_history[epoch] = loss_value.item()
-            if epoch % np.round(self.epochs/10) == 0 or epoch == self.epochs-1:
+            if epoch % np.round(self.epochs/20) == 0 or epoch == self.epochs-1:
                 print(f"Epoch {epoch+1}/{self.epochs}, Total Loss: {loss_value.item():.8f}")
 
     def plot_loss(self):
@@ -171,9 +139,6 @@ class PINN(nn.Module, BasicData):
             valmax = self.Problem.endTime,
             valinit = self.Problem.startTime,
         )
-
-        for t in [0.0, 0.025, 0.05, 0.075, 0.1]:
-            print(t, float(self.predict(self.np_to_th(np.array([[0.5, t]])))))
 
         def update(val):
             line.set_ydata(self.Problem.AnalyticalSolution(x, time_slider.val))
