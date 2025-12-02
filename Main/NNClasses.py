@@ -19,7 +19,7 @@ class Activation_LeakyReLU(Layer):
         super().__init__()
         self.DeactivateAttr()
 
-    def forward(self, inputs:np.ndarray):
+    def forward(self, inputs:np.ndarray, isTraining:bool=True):
         self.inputs = inputs #* Save inputs for backpropagation
         self.output = np.where(inputs > 0, inputs, inputs * 0.01)
 
@@ -32,7 +32,7 @@ class Activation_Tanh(Layer):
         super().__init__()
         self.DeactivateAttr()
 
-    def forward(self, inputs:np.ndarray):
+    def forward(self, inputs:np.ndarray, isTraining:bool=True):
         self.inputs = inputs #* Save inputs for backpropagation
         self.output = np.tanh(inputs)
 
@@ -44,7 +44,7 @@ class Activation_Sigmoid(Layer):
         super().__init__()
         self.DeactivateAttr()
 
-    def forward(self, inputs:np.ndarray):
+    def forward(self, inputs:np.ndarray, isTraining:bool=True):
         self.inputs = inputs #* Save inputs for backpropagation
         self.output = 1 / (1 + np.exp(-inputs))
 

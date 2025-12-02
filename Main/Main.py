@@ -19,56 +19,83 @@ def main_nn_by_hand():
     #* set seed to zero
     seed = 0
     np.random.seed(seed)
+
     #* set the data points (all points)
-    xpts = np.linspace(-2, 3, 100)
-    set_xnew = np.linspace(-2, 3, 1000)
+    xpts = np.linspace(-2, 3, 50)
+    set_xnew = np.linspace(-2, 3, 50)
     npts = len(xpts)
     #* define the real function
-    yreal = (
-            np.sin(12*np.pi*xpts)
-            + 0.3*np.cos(4*np.pi*xpts)      
-            + np.sin(5*np.pi*xpts - 0.1)
-        ) +  0.1*np.random.randn(npts)
     
     yreal = (
-            np.sin(xpts*np.pi)
-            # +  0.3*np.random.randn(npts)
-            # + 0.3*np.cos(4*np.pi*xpts)      
+            np.sin(xpts*np.pi)  
         )
-    
-    yreal = np.where(np.sin(15 * xpts) + 0.3 * xpts**2 > 0, 1, 0)
-    # yreal = (np.sin(10*xpts)) ## Second function
+
+    # yreal = xpts**2 - np.sin(5*xpts) # Third function
 
     #* set the data set and split between training and test data
     Data = DataSet(xpts.reshape(npts, 1), yreal.reshape(npts, 1))
     train_set, test_set = Data.split(0.7) 
+
+
+    # # add one training point at x = -0.9 (compute y with the same function used above)
+    # x_extra = np.array([[-0.9]])
+    # y_extra = (x_extra.flatten()**2 - np.sin(5 * x_extra.flatten())).reshape(-1, 1)
+
+    # # append to train_set
+    # train_set.x = np.vstack([train_set.x, x_extra])
+    # train_set.y = np.vstack([train_set.y, y_extra])
+
+    # # ensure this point is not duplicated in test_set (remove if present)
+    # if hasattr(test_set, "x") and hasattr(test_set, "y"):
+    #     mask = np.abs(test_set.x.flatten() + 0.9) > 1e-8
+    #     test_set.x = test_set.x[mask].reshape(-1, 1)
+    #     test_set.y = test_set.y[mask].reshape(-1, 1)
+
+    # # also add the extra point to the original xpts and yreal (if not already present)
+    # x_val = float(x_extra.flatten()[0])
+    # y_val = float(y_extra.flatten()[0])
+
+    # if not np.any(np.isclose(xpts, x_val)):
+    #     xpts = np.append(xpts, x_val)
+    #     yreal = np.append(yreal, y_val)
+    #     # keep arrays sorted by x
+    #     order = np.argsort(xpts)
+    #     xpts = xpts[order]
+    #     yreal = yreal[order]
+
+    # # keep set_xnew consistent with updated xpts
+    # if 'set_xnew' in locals():
+    #     set_xnew = np.copy(xpts)
+
+
     #* Hyperparameters definition
     lr = 0.1                            #* learning rate
-    epochs = 1000                       #* number of epochs
+    epochs = 500000                       #* number of epochs
     decay_rate = 0                      #* set as 0.0 for no decay
     decay_step = 100000                 #* if dacay is zero, is it not used
     momentum = 0.00                     #* set as 0.0 for no momentum
     l2_regularization_weight = 0.0      #* set as 0.0 for no L2 regularization
+
     nn_layers = {                       #* set the dense layers configuration
                 "layer_0": 
                     {
-                        "neurons": 500, 
-                        "activation": Activation_ReLU(),
-                        "dropout": [True, 0.5],
+                        "neurons": 100, 
+                        "activation": Activation_LeakyReLU(),
+                        "dropout": [True, 0.2],
                     },
                 "layer_1": 
                     {
-                        "neurons": 400, 
+                        "neurons": 50, 
                         "activation": Activation_ReLU(),
-                        "dropout":  [True, 0.5],
+                        "dropout":  [True, 0.2],
                     },
+                # "layer_2": 
+                #     {
+                #         "neurons": 50, 
+                #         "activation": Activation_LeakyReLU(),
+                #         "dropout":  [False, 0.5],
+                #     },
                 "layer_2": 
-                    {
-                        "neurons": 200, 
-                        "activation": Activation_ReLU(),
-                        "dropout":  [False, 0.5],
-                    },
-                "layer_3": 
                     {
                         "neurons": 1, 
                         "activation": None,
@@ -76,7 +103,7 @@ def main_nn_by_hand():
                     }
                 }
     
-    ##### SET THE PINN PROBLEM ######
+    ##### SET THE NN PROBLEM ######
     #* set the ANNN model
     nn = NeuralNetwork(1, lr=lr, epochs=epochs, decay_rate=decay_rate, decay_step=decay_step, optimizer=Optimizer_SGD, l2_regularization_weight=l2_regularization_weight, momentum=momentum)
     #* build the ANN layers
@@ -389,7 +416,7 @@ def SmallNetwork():
 ### USE IT TO CHAGE FOR BY HAND ANN OR PINN ###
 
 if __name__ == "__main__":
-    #main_nn_by_hand() # use to nn by hand validation
-    main_nn_torch() # use to PINN validation
+    main_nn_by_hand() # use to nn by hand validation
+    # main_nn_torch() # use to PINN validation
     #ParameterDiscovery()
     #SmallNetwork()
